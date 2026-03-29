@@ -18,7 +18,7 @@ import AdminUsers from './pages/Admin/Users';
 import AdminSettings from './pages/Admin/Settings';
 import AdminSubscribers from './pages/Admin/Subscribers';
 import ArticleEditor from './pages/Admin/ArticleEditor';
-import Search from './pages/Search';
+import SearchPage from './pages/SearchPage';
 
 // Static Pages
 import StaticPage from './pages/StaticPage';
@@ -76,7 +76,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/article/:slug" element={<ArticleDetail />} />
               <Route path="/category/:slug" element={<CategoryPage />} />
-              <Route path="/search" element={<Search />} />
+              <Route path="/search" element={<SearchPage />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminDashboard profile={profile} />} />
               <Route path="/admin/users" element={<AdminUsers profile={profile} />} />
