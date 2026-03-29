@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -15,15 +14,26 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     
-    // In a real app, you would save this to Firestore
-    import('sonner').then(({ toast }) => {
+    try {
+      const { addDoc, collection } = await import('firebase/firestore');
+      await addDoc(collection(db, 'subscribers'), {
+        email,
+        subscribedAt: new Date().toISOString(),
+        status: 'active'
+      });
+      
+      const { toast } = await import('sonner');
       toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
       setEmail('');
-    });
+    } catch (error) {
+      console.error("Error subscribing:", error);
+      const { toast } = await import('sonner');
+      toast.error("Une erreur est survenue lors de l'inscription.");
+    }
   };
 
   useEffect(() => {

@@ -40,11 +40,11 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-bold uppercase tracking-widest mb-6 text-blue-500">Liens Utiles</h3>
             <ul className="space-y-3 text-sm text-gray-400">
-              <li><Link to="/" className="hover:text-white transition-colors">À propos</Link></li>
-              <li><Link to="/" className="hover:text-white transition-colors">Contact</Link></li>
-              <li><Link to="/" className="hover:text-white transition-colors">Mentions Légales</Link></li>
-              <li><Link to="/" className="hover:text-white transition-colors">Publicité</Link></li>
-              <li><Link to="/" className="hover:text-white transition-colors">Archives</Link></li>
+              <li><Link to="/about" className="hover:text-white transition-colors">À propos</Link></li>
+              <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><Link to="/legal" className="hover:text-white transition-colors">Mentions Légales</Link></li>
+              <li><Link to="/advertising" className="hover:text-white transition-colors">Publicité</Link></li>
+              <li><Link to="/archives" className="hover:text-white transition-colors">Archives</Link></li>
             </ul>
           </div>
 
@@ -58,11 +58,11 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-blue-500 shrink-0" />
-                <span>+269 00 00 00</span>
+                <span>+269 442 67 36</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail size={18} className="text-blue-500 shrink-0" />
-                <span>contact@fcbkfm.com</span>
+                <span>facbookfm0@gmail.com</span>
               </li>
             </ul>
           </div>

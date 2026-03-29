@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Article": {
@@ -58,6 +59,17 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Account creation date" }
       },
       "required": ["email", "role"]
+    },
+    "Subscriber": {
+      "title": "Subscriber",
+      "description": "A user who has subscribed to the newsletter.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "Subscriber's email address" },
+        "subscribedAt": { "type": "string", "format": "date-time", "description": "Timestamp of subscription" },
+        "status": { "type": "string", "enum": ["active", "unsubscribed"], "description": "Subscription status" }
+      },
+      "required": ["email", "subscribedAt"]
     }
   },
   "firestore": {
@@ -76,6 +88,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "Collection of system users."
+    },
+    "/subscribers/{subscriberId}": {
+      "schema": "Subscriber",
+      "description": "Collection of newsletter subscribers."
     }
   }
 }

@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, deleteDoc, doc, where } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { Article, UserProfile } from '../../types';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Eye, FileText, LayoutDashboard, LogOut, Users, Settings } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText, LayoutDashboard, LogOut, Users, Settings, Mail } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 import { toast } from 'sonner';
 
@@ -61,6 +62,7 @@ export default function AdminDashboard({ profile }: DashboardProps) {
         <nav className="space-y-4 flex-grow">
           <Link to="/admin" className="flex items-center gap-3 p-3 bg-blue-600 rounded-xl font-bold"><LayoutDashboard size={20} /> Dashboard</Link>
           <Link to="/admin/editor" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Plus size={20} /> Nouvel Article</Link>
+          <Link to="/admin/subscribers" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Mail size={20} /> Abonnés</Link>
           <Link to="/admin/users" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Users size={20} /> Utilisateurs</Link>
           <Link to="/admin/settings" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Settings size={20} /> Paramètres</Link>
         </nav>
@@ -99,11 +101,12 @@ export default function AdminDashboard({ profile }: DashboardProps) {
           </div>
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Plus size={24} /></div>
-              <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-full">Stable</span>
+              <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Mail size={24} /></div>
+              <span className="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded-full">Nouveau</span>
             </div>
-            <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Auteurs Actifs</h3>
-            <p className="text-3xl font-black text-black">8</p>
+            <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Abonnés Newsletter</h3>
+            <p className="text-3xl font-black text-black">Gérer</p>
+            <Link to="/admin/subscribers" className="text-xs text-blue-600 font-bold hover:underline mt-2 inline-block">Voir la liste</Link>
           </div>
         </div>
 

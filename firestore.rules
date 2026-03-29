@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -53,6 +54,12 @@ service cloud.firestore {
              data.role in ['admin', 'editor', 'journalist'];
     }
 
+    function isValidSubscriber(data) {
+      return data.email is string && data.email.size() > 5 && data.email.size() < 100 &&
+             data.subscribedAt is string &&
+             (!('status' in data) || data.status in ['active', 'unsubscribed']);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -83,6 +90,13 @@ service cloud.firestore {
       allow create: if isAdmin() || (request.auth.uid == userId && request.auth.token.email == "ahassanimhoma20@gmail.com");
       allow update: if isAdmin() || (request.auth.uid == userId && request.resource.data.role == resource.data.role);
       allow delete: if isAdmin();
+    }
+
+    // Subscribers
+    match /subscribers/{subscriberId} {
+      allow read: if isEditor();
+      allow create: if isValidSubscriber(request.resource.data);
+      allow update, delete: if isEditor();
     }
   }
 }
