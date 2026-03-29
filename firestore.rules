@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(path) ? get(path).data : {"role": "none"};
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "ahassanimhoma20@gmail.com" ||
+        getUserData().role == 'admin'
+      );
+    }
+    
+    function isEditor() {
+      return isAuthenticated() && (isAdmin() || getUserData().role == 'editor');
+    }
+    
+    function isJournalist() {
+      return isAuthenticated() && (isEditor() || getUserData().role == 'journalist');
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidArticle(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 1000000 &&
+             data.category is string &&
+             data.authorId is string &&
+             data.status in ['draft', 'published', 'scheduled'] &&
+             (!('mainImage' in data) || (data.mainImage is string && data.mainImage.size() < 1000000)) &&
+             (!('excerpt' in data) || (data.excerpt is string && data.excerpt.size() < 1000)) &&
+             (!('slug' in data) || (data.slug is string && data.slug.size() < 200));
+    }
+
+    function isValidUser(data) {
+      return data.email is string &&
+             data.role in ['admin', 'editor', 'journalist'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Articles
+    match /articles/{articleId} {
+      allow read: if true; // Publicly readable
+      allow create: if isJournalist() && isValidArticle(request.resource.data);
+      allow update: if isJournalist() && isValidArticle(request.resource.data);
+      allow delete: if isEditor();
+    }
+
+    // Categories
+    match /categories/{categoryId} {
+      allow read: if true; // Publicly readable
+      allow write: if isEditor();
+    }
+
+    // Authors
+    match /authors/{authorId} {
+      allow read: if true; // Publicly readable
+      allow write: if isEditor();
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isEditor());
+      allow create: if isAdmin() || (request.auth.uid == userId && request.auth.token.email == "ahassanimhoma20@gmail.com");
+      allow update: if isAdmin() || (request.auth.uid == userId && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+  }
+}
