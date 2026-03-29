@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User } from 'firebase/auth';
@@ -25,11 +26,21 @@ const categories = [
 export default function Navbar({ user, profile }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/');
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+      setSearchQuery('');
+    }
   };
 
   return (
@@ -105,7 +116,17 @@ export default function Navbar({ user, profile }: NavbarProps) {
 
       {/* Mobile Menu */}
       <div className={cn("lg:hidden", isOpen ? "block" : "hidden")}>
-        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-100">
+        <div className="px-4 pt-2 pb-3 space-y-1 bg-white border-t border-gray-100">
+          <form onSubmit={handleSearch} className="relative mb-4">
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-xl text-sm border-none focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          </form>
           {categories.map((cat) => (
             <Link
               key={cat.slug}
@@ -122,17 +143,20 @@ export default function Navbar({ user, profile }: NavbarProps) {
       {/* Search Overlay */}
       {isSearchOpen && (
         <div className="absolute top-full left-0 w-full bg-white border-b border-gray-200 p-4 shadow-lg animate-in slide-in-from-top duration-200">
-          <div className="max-w-3xl mx-auto flex items-center">
+          <form onSubmit={handleSearch} className="max-w-3xl mx-auto flex items-center">
             <input
               type="text"
               placeholder="Rechercher une actualité..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-3 text-lg border-none focus:ring-0 outline-none"
               autoFocus
             />
-            <button onClick={() => setIsSearchOpen(false)} className="p-2 text-gray-400 hover:text-black">
+            <button type="submit" className="hidden">Rechercher</button>
+            <button type="button" onClick={() => setIsSearchOpen(false)} className="p-2 text-gray-400 hover:text-black">
               <X size={24} />
             </button>
-          </div>
+          </form>
         </div>
       )}
     </nav>

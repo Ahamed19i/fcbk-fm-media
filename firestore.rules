@@ -55,7 +55,7 @@ service cloud.firestore {
     }
 
     function isValidSubscriber(data) {
-      return data.email is string && data.email.size() > 5 && data.email.size() < 100 &&
+      return data.email is string && data.email.size() >= 5 && data.email.size() < 255 &&
              data.subscribedAt is string &&
              (!('status' in data) || data.status in ['active', 'unsubscribed']);
     }

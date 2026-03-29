@@ -18,6 +18,7 @@ import AdminUsers from './pages/Admin/Users';
 import AdminSettings from './pages/Admin/Settings';
 import AdminSubscribers from './pages/Admin/Subscribers';
 import ArticleEditor from './pages/Admin/ArticleEditor';
+import Search from './pages/Search';
 
 // Static Pages
 import StaticPage from './pages/StaticPage';
@@ -75,6 +76,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/article/:slug" element={<ArticleDetail />} />
               <Route path="/category/:slug" element={<CategoryPage />} />
+              <Route path="/search" element={<Search />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminDashboard profile={profile} />} />
               <Route path="/admin/users" element={<AdminUsers profile={profile} />} />
@@ -99,18 +101,18 @@ export default function App() {
                     <div className="p-8 bg-gray-50 rounded-3xl border border-gray-100">
                       <h3 className="text-xl font-black mb-4">Rédaction</h3>
                       <p className="text-gray-500">Pour tout ce qui concerne l'actualité et les reportages.</p>
-                      <p className="font-bold mt-4 text-blue-600">redaction@fcbkfm.com</p>
+                      <p className="font-bold mt-4 text-blue-600">facbookfm0@gmail.com</p>
                     </div>
                     <div className="p-8 bg-gray-50 rounded-3xl border border-gray-100">
                       <h3 className="text-xl font-black mb-4">Publicité</h3>
                       <p className="text-gray-500">Pour vos campagnes publicitaires et partenariats.</p>
-                      <p className="font-bold mt-4 text-blue-600">pub@fcbkfm.com</p>
+                      <p className="font-bold mt-4 text-blue-600">facbookfm0@gmail.com</p>
                     </div>
                   </div>
                   <div className="mt-12">
                     <h3 className="text-xl font-black mb-4">Siège Social</h3>
                     <p>Moroni, Grande Comore, Comores</p>
-                    <p>Téléphone : +269 00 00 00</p>
+                    <p>Téléphone : +269 442 67 36</p>
                   </div>
                 </div>
               } />} />
@@ -140,7 +142,7 @@ export default function App() {
                     <li>Campagnes sur nos réseaux sociaux (Facebook, Instagram, Youtube)</li>
                     <li>Partenariats événementiels</li>
                   </ul>
-                  <p className="mt-8">Contactez notre régie publicitaire pour recevoir notre kit média : <span className="font-bold text-blue-600">pub@fcbkfm.com</span></p>
+                  <p className="mt-8">Contactez notre régie publicitaire pour recevoir notre kit média : <span className="font-bold text-blue-600">facbookfm0@gmail.com</span></p>
                 </div>
               } />} />
               <Route path="/archives" element={<StaticPage title="Archives" content={

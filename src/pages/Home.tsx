@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
 import { ChevronRight, TrendingUp, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -19,19 +20,16 @@ export default function Home() {
     if (!email) return;
     
     try {
-      const { addDoc, collection } = await import('firebase/firestore');
       await addDoc(collection(db, 'subscribers'), {
         email,
         subscribedAt: new Date().toISOString(),
         status: 'active'
       });
       
-      const { toast } = await import('sonner');
       toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
       setEmail('');
     } catch (error) {
       console.error("Error subscribing:", error);
-      const { toast } = await import('sonner');
       toast.error("Une erreur est survenue lors de l'inscription.");
     }
   };
