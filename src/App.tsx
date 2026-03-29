@@ -18,7 +18,7 @@ import AdminUsers from './pages/Admin/Users';
 import AdminSettings from './pages/Admin/Settings';
 import AdminSubscribers from './pages/Admin/Subscribers';
 import ArticleEditor from './pages/Admin/ArticleEditor';
-import SearchPage from './pages/SearchPage';
+import SearchPage from './pages/SearchPage.tsx';
 
 // Static Pages
 import StaticPage from './pages/StaticPage';

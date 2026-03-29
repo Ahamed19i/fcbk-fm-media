@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Article } from '../types';
-import ArticleCard from './ArticleCard';
+import ArticleCard from '../components/ArticleCard';
 import { Search as SearchIcon } from 'lucide-react';
 
 export default function SearchPage() {
