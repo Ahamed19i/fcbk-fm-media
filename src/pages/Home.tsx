@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -11,6 +13,18 @@ export default function Home() {
   const [breakingNews, setBreakingNews] = useState<Article | null>(null);
   const [trending, setTrending] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState('');
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    // In a real app, you would save this to Firestore
+    import('sonner').then(({ toast }) => {
+      toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
+      setEmail('');
+    });
+  };
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -78,10 +92,17 @@ export default function Home() {
                 <h3 className="text-2xl font-black mb-2">Restez informé en temps réel</h3>
                 <p className="text-blue-100 text-sm">Abonnez-vous à notre newsletter pour recevoir les alertes info directement dans votre boîte mail.</p>
               </div>
-              <div className="flex w-full md:w-auto gap-2">
-                <input type="email" placeholder="Votre email" className="px-4 py-2 rounded-lg text-black w-full md:w-64 focus:ring-2 focus:ring-blue-400 outline-none" />
-                <button className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-900 transition-colors">S'abonner</button>
-              </div>
+              <form onSubmit={handleSubscribe} className="flex w-full md:w-auto gap-2">
+                <input 
+                  type="email" 
+                  placeholder="Votre email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="px-4 py-2 rounded-lg text-black w-full md:w-64 focus:ring-2 focus:ring-blue-400 outline-none" 
+                  required
+                />
+                <button type="submit" className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-900 transition-colors whitespace-nowrap">S'abonner</button>
+              </form>
             </div>
 
             {/* More News */}

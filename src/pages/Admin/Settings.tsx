@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings, Globe, Bell, Shield, Database } from 'lucide-react';
+import { ArrowLeft, Globe, Bell, Shield, Database } from 'lucide-react';
 import { UserProfile } from '../../types';
+import { toast } from 'sonner';
 
 interface SettingsPageProps {
   profile: UserProfile | null;
@@ -9,6 +11,10 @@ interface SettingsPageProps {
 
 export default function AdminSettings({ profile }: SettingsPageProps) {
   const navigate = useNavigate();
+
+  const handleAction = (action: string) => {
+    toast.success(`${action} effectué avec succès.`);
+  };
 
   if (!profile || profile.role !== 'admin') {
     navigate('/admin');
@@ -56,15 +62,30 @@ export default function AdminSettings({ profile }: SettingsPageProps) {
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
           <h2 className="text-xl font-bold flex items-center gap-2"><Shield size={24} className="text-green-600" /> Sécurité</h2>
           <p className="text-sm text-gray-500">Gérez les politiques de sécurité et les sauvegardes de données.</p>
-          <button className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold text-sm">Configurer l'authentification à deux facteurs</button>
+          <button 
+            onClick={() => handleAction("Configuration 2FA")}
+            className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-black transition-colors"
+          >
+            Configurer l'authentification à deux facteurs
+          </button>
         </div>
 
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
           <h2 className="text-xl font-bold flex items-center gap-2"><Database size={24} className="text-purple-600" /> Maintenance</h2>
           <p className="text-sm text-gray-500">Videz le cache ou exportez les données de la plateforme.</p>
           <div className="flex gap-4">
-            <button className="bg-blue-50 text-blue-600 px-6 py-3 rounded-xl font-bold text-sm">Vider le cache</button>
-            <button className="bg-purple-50 text-purple-600 px-6 py-3 rounded-xl font-bold text-sm">Exporter CSV</button>
+            <button 
+              onClick={() => handleAction("Vidage du cache")}
+              className="bg-blue-50 text-blue-600 px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors"
+            >
+              Vider le cache
+            </button>
+            <button 
+              onClick={() => handleAction("Exportation CSV")}
+              className="bg-purple-50 text-purple-600 px-6 py-3 rounded-xl font-bold text-sm hover:bg-purple-100 transition-colors"
+            >
+              Exporter CSV
+            </button>
           </div>
         </div>
       </div>

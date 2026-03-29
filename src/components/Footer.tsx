@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
@@ -39,11 +40,11 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-bold uppercase tracking-widest mb-6 text-blue-500">Liens Utiles</h3>
             <ul className="space-y-3 text-sm text-gray-400">
-              <li><a href="#" className="hover:text-white transition-colors">À propos</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Mentions Légales</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Publicité</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Archives</a></li>
+              <li><Link to="/" className="hover:text-white transition-colors">À propos</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Mentions Légales</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Publicité</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Archives</Link></li>
             </ul>
           </div>
 
