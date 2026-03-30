@@ -7,6 +7,7 @@ import ArticleCard from '../components/ArticleCard';
 import { ChevronRight, TrendingUp, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import SEO from '../components/SEO';
 
 export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -69,6 +70,7 @@ export default function Home() {
 
   return (
     <div className="bg-white">
+      <SEO />
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {breakingNews && <ArticleCard article={breakingNews} variant="large" />}

@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
@@ -8,6 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight } from 'lucide-react';
 import ArticleCard from '../components/ArticleCard';
 import { toast } from 'sonner';
+import SEO from '../components/SEO';
 
 export default function ArticleDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -89,6 +92,12 @@ export default function ArticleDetail() {
 
   return (
     <article className="bg-white">
+      <SEO 
+        title={article.title} 
+        description={article.excerpt} 
+        ogImage={article.mainImage} 
+        ogType="article" 
+      />
       {/* Header */}
       <header className="max-w-4xl mx-auto px-4 pt-12 pb-8">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 mb-6">

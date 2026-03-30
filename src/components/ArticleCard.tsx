@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Article } from '../types';
@@ -19,6 +21,7 @@ export default function ArticleCard({ article, variant = 'medium' }: ArticleCard
             alt={article.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             referrerPolicy="no-referrer"
+            loading="lazy"
           />
         </div>
         <div className="flex-grow">
@@ -44,6 +47,7 @@ export default function ArticleCard({ article, variant = 'medium' }: ArticleCard
           alt={article.title}
           className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700"
           referrerPolicy="no-referrer"
+          loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
         <div className="absolute bottom-0 left-0 p-6 sm:p-10 w-full">
@@ -73,6 +77,7 @@ export default function ArticleCard({ article, variant = 'medium' }: ArticleCard
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           referrerPolicy="no-referrer"
+          loading="lazy"
         />
       </div>
       <div>

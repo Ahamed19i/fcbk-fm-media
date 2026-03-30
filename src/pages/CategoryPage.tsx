@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
@@ -5,6 +6,7 @@ import { db } from '../lib/firebase';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
 import { ChevronRight, Zap } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -44,6 +46,10 @@ export default function CategoryPage() {
 
   return (
     <div className="bg-white min-h-screen">
+      <SEO 
+        title={slug?.toUpperCase()} 
+        description={`Retrouvez toute l'actualité de la catégorie ${slug} sur FCBK FM.`} 
+      />
       <div className="bg-gray-50 py-12 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 mb-4">
