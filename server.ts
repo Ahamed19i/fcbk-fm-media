@@ -1,5 +1,4 @@
 
-
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -33,9 +32,8 @@ async function startServer() {
     }
 
     if (!BREVO_API_KEY) {
-      // Fallback if no API key is provided yet
-      console.warn("BREVO_API_KEY non configurée. Simulation de succès.");
-      return res.json({ success: true, message: "Simulation réussie (clé manquante)" });
+      console.error("BREVO_API_KEY non configurée dans les variables d'environnement.");
+      return res.status(500).json({ error: "Configuration Brevo manquante sur le serveur." });
     }
 
     try {
@@ -44,7 +42,7 @@ async function startServer() {
         {
           email,
           updateEnabled: true,
-          listIds: [2], // Remplacez par votre ID de liste Brevo
+          listIds: [2], // ID de liste par défaut
         },
         {
           headers: {
@@ -55,7 +53,14 @@ async function startServer() {
       );
       res.json({ success: true });
     } catch (error: any) {
-      console.error("Erreur Brevo:", error.response?.data || error.message);
+      const brevoError = error.response?.data;
+      console.error("Erreur Brevo:", brevoError || error.message);
+
+      // Si le contact existe déjà, on considère cela comme un succès pour l'utilisateur
+      if (brevoError?.code === "duplicate_parameter" || brevoError?.message?.includes("already exists")) {
+        return res.json({ success: true, message: "Déjà inscrit" });
+      }
+
       res.status(500).json({ error: "Erreur lors de l'inscription" });
     }
   });

@@ -18,30 +18,47 @@ export default function Home() {
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    const emailToSubscribe = email.trim().toLowerCase();
+    if (!emailToSubscribe) return;
     
     try {
-      // 1. Save to Firestore (as backup)
+      // 1. Vérifier si l'email existe déjà dans Firestore pour éviter les doublons
+      const subscribersRef = collection(db, 'subscribers');
+      const q = query(subscribersRef, where('email', '==', emailToSubscribe));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        toast.info("Vous êtes déjà inscrit à notre newsletter avec cet email.");
+        setEmail('');
+        return;
+      }
+
+      // 2. Enregistrer dans Firestore
       await addDoc(collection(db, 'subscribers'), {
-        email,
+        email: emailToSubscribe,
         subscribedAt: new Date().toISOString(),
         status: 'active'
       });
       
-      // 2. Call Brevo API via our server
+      // 3. Appeler l'API Brevo via notre serveur
       const response = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email: emailToSubscribe })
       });
 
-      if (!response.ok) throw new Error('Failed to subscribe');
-      
-      toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
-      setEmail('');
+      if (response.ok) {
+        toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
+        setEmail('');
+      } else {
+        // Si Brevo échoue mais Firestore a réussi, on informe quand même d'un succès partiel ou on gère l'erreur
+        const errorData = await response.json();
+        console.error("Erreur API Brevo:", errorData);
+        toast.error("Une erreur est survenue lors de la synchronisation avec Brevo. Veuillez réessayer.");
+      }
     } catch (error) {
-      console.error("Error subscribing:", error);
-      toast.error("Une erreur est survenue lors de l'inscription.");
+      console.error("Erreur lors de l'inscription:", error);
+      toast.error("Une erreur est survenue lors de l'inscription. Veuillez réessayer.");
     }
   };
 
