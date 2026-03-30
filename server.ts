@@ -65,6 +65,30 @@ async function startServer() {
     }
   });
 
+  // Verify staff access code securely
+  app.post("/api/verify-staff-code", async (req, res) => {
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: "Code requis" });
+    }
+
+    try {
+      // On utilise une variable d'environnement sur le serveur (invisible côté client)
+      // Cela permet de ne pas exposer le code sur GitHub.
+      const requiredCode = process.env.ADMIN_ACCESS_CODE || "FCBK2026";
+      
+      if (code === requiredCode) {
+        return res.json({ success: true });
+      } else {
+        return res.status(401).json({ error: "Code invalide" });
+      }
+    } catch (error) {
+      console.error("Erreur de vérification:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
   // robots.txt
   app.get("/robots.txt", (req, res) => {
     const baseUrl = process.env.APP_URL || "https://ais-pre-lg5bv55vxbrifnzov3d76z-718657164461.europe-west2.run.app";

@@ -13,15 +13,26 @@ export default function AdminLogin() {
   const [accessCode, setAccessCode] = useState('');
   const [isVerified, setIsVerified] = useState(false);
 
-  const handleVerifyCode = (e: React.FormEvent) => {
+  const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Le code par défaut est récupéré depuis l'environnement ou "FCBK2026"
-    const requiredCode = import.meta.env.VITE_ADMIN_ACCESS_CODE || "FCBK2026";
-    if (accessCode === requiredCode) {
-      setIsVerified(true);
-      toast.success("Code d'accès valide. Veuillez vous identifier.");
-    } else {
-      toast.error("Code d'accès invalide.");
+    setLoading(true);
+    try {
+      const response = await fetch('/api/verify-staff-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: accessCode })
+      });
+
+      if (response.ok) {
+        setIsVerified(true);
+        toast.success("Code d'accès valide. Veuillez vous identifier.");
+      } else {
+        toast.error("Code d'accès invalide.");
+      }
+    } catch (error) {
+      toast.error("Erreur lors de la vérification.");
+    } finally {
+      setLoading(false);
     }
   };
 
