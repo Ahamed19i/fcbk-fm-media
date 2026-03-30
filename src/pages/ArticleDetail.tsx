@@ -90,7 +90,7 @@ export default function ArticleDetail() {
   }
 
   return (
-    <article className="bg-white dark:bg-gray-950 transition-colors duration-300">
+    <article className="bg-white dark:bg-gray-950 transition-colors duration-300 min-h-screen">
       <SEO 
         title={article.title} 
         description={article.excerpt} 

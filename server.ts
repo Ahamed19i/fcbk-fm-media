@@ -1,4 +1,5 @@
 
+
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -59,13 +60,20 @@ async function startServer() {
     }
   });
 
+  // robots.txt
+  app.get("/robots.txt", (req, res) => {
+    const baseUrl = process.env.APP_URL || "https://ais-pre-lg5bv55vxbrifnzov3d76z-718657164461.europe-west2.run.app";
+    res.type("text/plain");
+    res.send(`User-agent: *
+Allow: /
+Sitemap: ${baseUrl}/sitemap.xml`);
+  });
+
   // Dynamic Sitemap
   app.get("/sitemap.xml", (req, res) => {
-    const baseUrl = "https://ais-pre-lg5bv55vxbrifnzov3d76z-718657164461.europe-west2.run.app";
+    const baseUrl = process.env.APP_URL || "https://ais-pre-lg5bv55vxbrifnzov3d76z-718657164461.europe-west2.run.app";
     const pages = ["", "/about", "/contact", "/legal", "/advertising", "/archives"];
     
-    // In a real app, you would fetch all article slugs from Firestore here
-    // For now, we'll return a basic sitemap
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${pages.map(page => `

@@ -48,7 +48,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
   return (
     <nav className="bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50 transition-colors duration-300">
       {/* Top Bar */}
-      <div className="bg-black text-white py-2 px-4 text-xs font-medium flex justify-between items-center">
+      <div className="bg-gray-100 dark:bg-black text-gray-600 dark:text-white py-2 px-4 text-xs font-medium flex justify-between items-center transition-colors duration-300">
         <div className="flex space-x-4">
           <span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
           <span className="hidden sm:inline">FCBK FM - Le Média de Référence des Comores</span>
@@ -56,7 +56,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
         <div className="flex items-center space-x-4">
           <button 
             onClick={toggleTheme}
-            className="p-1 hover:text-blue-400 transition-colors"
+            className="p-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             title={theme === 'light' ? 'Passer au mode sombre' : 'Passer au mode clair'}
           >
             {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
@@ -65,16 +65,16 @@ export default function Navbar({ user, profile }: NavbarProps) {
             <div className="flex items-center space-x-3">
               <span className="opacity-70">{profile?.displayName || user.email}</span>
               {profile?.role && (
-                <Link to="/admin" className="hover:text-blue-400 flex items-center gap-1">
+                <Link to="/admin" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
                   <LayoutDashboard size={14} /> Admin
                 </Link>
               )}
-              <button onClick={handleLogout} className="hover:text-red-400 flex items-center gap-1">
+              <button onClick={handleLogout} className="hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1">
                 <LogOut size={14} /> Quitter
               </button>
             </div>
           ) : (
-            <Link to="/admin/login" className="hover:text-blue-400 flex items-center gap-1">
+            <Link to="/admin/login" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <UserIcon size={14} /> Connexion
             </Link>
           )}

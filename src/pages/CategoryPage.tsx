@@ -45,19 +45,19 @@ export default function CategoryPage() {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white dark:bg-gray-950 min-h-screen transition-colors duration-300">
       <SEO 
         title={slug?.toUpperCase()} 
         description={`Retrouvez toute l'actualité de la catégorie ${slug} sur FCBK FM.`} 
       />
-      <div className="bg-gray-50 py-12 border-b border-gray-100">
+      <div className="bg-gray-50 dark:bg-gray-900 py-12 border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 mb-4">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">
             <Link to="/" className="hover:underline">Accueil</Link>
             <ChevronRight size={12} />
-            <span className="text-gray-400">{slug}</span>
+            <span className="text-gray-400 dark:text-gray-500">{slug}</span>
           </div>
-          <h1 className="text-4xl font-black text-black uppercase tracking-tight">
+          <h1 className="text-4xl font-black text-black dark:text-white uppercase tracking-tight">
             {slug}
           </h1>
         </div>
@@ -72,9 +72,9 @@ export default function CategoryPage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <Zap className="mx-auto text-gray-200 mb-6" size={64} />
-            <h2 className="text-2xl font-bold text-gray-400">Aucun article dans cette catégorie pour le moment.</h2>
-            <Link to="/" className="text-blue-600 hover:underline mt-4 inline-block">Retour à l'accueil</Link>
+            <Zap className="mx-auto text-gray-200 dark:text-gray-800 mb-6" size={64} />
+            <h2 className="text-2xl font-bold text-gray-400 dark:text-gray-600">Aucun article dans cette catégorie pour le moment.</h2>
+            <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline mt-4 inline-block">Retour à l'accueil</Link>
           </div>
         )}
       </section>
