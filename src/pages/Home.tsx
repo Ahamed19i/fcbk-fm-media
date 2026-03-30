@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
@@ -16,14 +16,24 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    const emailToSubscribe = email.trim().toLowerCase();
-    if (!emailToSubscribe) return;
+    if (submitting) return;
     
+    const emailToSubscribe = email.trim().toLowerCase();
+    
+    // Validation du format de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailToSubscribe || !emailRegex.test(emailToSubscribe)) {
+      toast.error("Veuillez entrer une adresse email valide (ex: nom@domaine.com).");
+      return;
+    }
+    
+    setSubmitting(true);
     try {
       // 1. Vérifier si l'email existe déjà dans Firestore (en utilisant l'email comme ID)
-      const { doc, getDoc, setDoc } = await import('firebase/firestore');
       const subscriberDocRef = doc(db, 'subscribers', emailToSubscribe);
       
       try {
@@ -31,6 +41,7 @@ export default function Home() {
         if (docSnap.exists()) {
           toast.info("Vous êtes déjà inscrit à notre newsletter avec cet email.");
           setEmail('');
+          setSubmitting(false);
           return;
         }
       } catch (checkError) {
@@ -45,27 +56,31 @@ export default function Home() {
         status: 'active'
       });
       
-      // 3. Appeler l'API Brevo via notre serveur
-      const response = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailToSubscribe })
-      });
+      // 3. Appeler l'API Brevo via notre serveur (optionnel, on ne bloque pas si ça échoue)
+      try {
+        const response = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailToSubscribe })
+        });
 
-      if (response.ok) {
-        toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
-        setEmail('');
-      } else {
-        // Si Brevo échoue mais Firestore a réussi, on informe quand même d'un succès partiel ou on gère l'erreur
-        const errorData = await response.json();
-        console.error("Erreur API Brevo:", errorData);
-        // On ne montre pas d'erreur fatale si Firestore a réussi (car l'admin verra l'email)
+        if (response.ok) {
+          toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
+        } else {
+          // Si Brevo échoue mais Firestore a réussi, on informe quand même d'un succès
+          toast.success('Merci pour votre inscription !');
+        }
+      } catch (apiError) {
+        console.warn("Erreur lors de l'appel à l'API Brevo, mais l'inscription Firestore a réussi.");
         toast.success('Merci pour votre inscription !');
-        setEmail('');
       }
-    } catch (error) {
-      console.error("Erreur lors de l'inscription:", error);
-      toast.error("Une erreur est survenue lors de l'inscription. Veuillez réessayer.");
+      
+      setEmail('');
+    } catch (error: any) {
+      console.error("Erreur détaillée lors de l'inscription:", error);
+      toast.error(`Un problème est survenu lors de l'inscription. Veuillez réessayer.`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -145,7 +160,17 @@ export default function Home() {
                   className="px-4 py-3 rounded-xl text-black dark:text-white bg-white dark:bg-gray-800 w-full md:w-64 focus:ring-2 focus:ring-blue-400 outline-none" 
                   required
                 />
-                <button type="submit" className="bg-black dark:bg-gray-950 text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-900 dark:hover:bg-black transition-colors whitespace-nowrap">S'abonner</button>
+                <button 
+                  type="submit" 
+                  disabled={submitting}
+                  className="bg-black dark:bg-gray-950 text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-900 dark:hover:bg-black transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
+                >
+                  {submitting ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    "S'abonner"
+                  )}
+                </button>
               </form>
             </div>
 
