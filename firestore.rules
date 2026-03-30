@@ -10,26 +10,29 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function getUserData() {
-      let path = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(path) ? get(path).data : {"role": "none"};
-    }
-    
+    // Use Custom Claims for roles (request.auth.token.role)
     function isAdmin() {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthenticated() && request.auth.token.role == 'admin';
     }
     
     function isEditor() {
-      return isAuthenticated() && (isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'editor');
+      return isAuthenticated() && (isAdmin() || request.auth.token.role == 'editor');
     }
     
     function isJournalist() {
-      return isAuthenticated() && (isEditor() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'journalist');
+      return isAuthenticated() && (isEditor() || request.auth.token.role == 'journalist');
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function fieldUnchanged(field) {
+      return !(field in request.resource.data) || request.resource.data[field] == resource.data[field];
     }
 
     // ===============================================================
@@ -37,23 +40,28 @@ service cloud.firestore {
     // ===============================================================
     
     function isValidArticle(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             data.content is string && data.content.size() > 0 && data.content.size() <= 50000 &&
+      return hasOnlyAllowedFields(['title', 'content', 'category', 'authorId', 'status', 'mainImage', 'excerpt', 'slug', 'createdAt', 'updatedAt', 'tags', 'views']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 100000 &&
              data.category is string && data.category.size() <= 50 &&
-             data.authorId is string && data.authorId == request.auth.uid &&
+             data.authorId is string && data.authorId.size() == 28 &&
              data.status in ['draft', 'published', 'scheduled'] &&
              (!('mainImage' in data) || (data.mainImage is string && data.mainImage.size() <= 2048)) &&
-             (!('excerpt' in data) || (data.excerpt is string && data.excerpt.size() <= 500)) &&
-             (!('slug' in data) || (data.slug is string && data.slug.size() <= 200));
+             (!('excerpt' in data) || (data.excerpt is string && data.excerpt.size() <= 1000)) &&
+             (!('slug' in data) || (data.slug is string && data.slug.size() <= 255)) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20));
     }
 
     function isValidUser(data) {
-      return data.email is string && data.email.size() <= 255 &&
-             data.role in ['admin', 'editor', 'journalist'];
+      return hasOnlyAllowedFields(['email', 'displayName', 'role', 'createdAt', 'photoURL', 'bio']) &&
+             data.email is string && data.email.size() <= 255 &&
+             data.role in ['admin', 'editor', 'journalist'] &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 500));
     }
 
     function isValidSubscriber(data) {
-      return data.email is string && data.email.size() >= 5 && data.email.size() <= 255 &&
+      return hasOnlyAllowedFields(['email', 'subscribedAt', 'status', 'source']) &&
+             data.email is string && data.email.size() >= 5 && data.email.size() <= 255 &&
              data.subscribedAt is string &&
              (!('status' in data) || data.status in ['active', 'unsubscribed']);
     }
@@ -65,9 +73,16 @@ service cloud.firestore {
     // Articles
     match /articles/{articleId} {
       allow read: if true; 
-      allow create: if isJournalist() && isValidArticle(request.resource.data);
-      allow update: if isJournalist() && isValidArticle(request.resource.data) && 
-                    request.resource.data.authorId == resource.data.authorId; // L'auteur ne change pas
+      
+      allow create: if isJournalist() && 
+                    isValidArticle(request.resource.data) && 
+                    request.resource.data.authorId == request.auth.uid;
+      
+      allow update: if (isEditor() || (isJournalist() && resource.data.authorId == request.auth.uid)) && 
+                    isValidArticle(request.resource.data) && 
+                    fieldUnchanged('authorId') && 
+                    fieldUnchanged('createdAt');
+      
       allow delete: if isEditor();
     }
 
@@ -85,20 +100,29 @@ service cloud.firestore {
     // Users
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isEditor());
-      allow create: if isAdmin(); // Seul un admin peut créer un autre admin/user avec rôle
-      allow update: if isAdmin() || (
-        request.auth.uid == userId && 
-        request.resource.data.role == resource.data.role // Un utilisateur ne peut pas changer son propre rôle
-      );
+      
+      allow create: if isAdmin() && isValidUser(request.resource.data);
+      
+      allow update: if (isAdmin() || (request.auth.uid == userId)) && 
+                    isValidUser(request.resource.data) &&
+                    (isAdmin() || request.resource.data.role == resource.data.role); // Non-admins can't change their role
+      
       allow delete: if isAdmin();
     }
 
     // Subscribers
     match /subscribers/{subscriberId} {
-      allow get: if true; // Permet de vérifier si un email (utilisé comme ID) existe
+      allow get: if true;
       allow list: if isEditor();
-      allow create: if isValidSubscriber(request.resource.data);
+      allow create: if isValidSubscriber(request.resource.data) && 
+                    request.resource.data.email == subscriberId; // ID must be the email
       allow update, delete: if isEditor();
+    }
+    
+    // System Config (e.g. for rate limiting or global settings)
+    match /system_config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

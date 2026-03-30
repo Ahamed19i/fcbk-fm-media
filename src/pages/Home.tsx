@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -15,6 +16,7 @@ export default function Home() {
   const [trending, setTrending] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
+  const [honeypot, setHoneypot] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,7 +24,13 @@ export default function Home() {
     e.preventDefault();
     if (submitting) return;
     
-    const emailToSubscribe = email.trim().toLowerCase();
+    // Honeypot check: if this field is filled, it's likely a bot
+    if (honeypot) {
+      console.warn("Spam detected via honeypot.");
+      toast.success('Merci pour votre inscription !'); // Fake success for bots
+      setEmail('');
+      return;
+    }
     
     // Validation du format de l'email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -148,10 +156,21 @@ export default function Home() {
             {/* Middle Banner */}
             <div className="my-12 p-8 bg-blue-600 dark:bg-blue-700 rounded-3xl text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-blue-500/20 transition-colors duration-300">
               <div className="max-w-md text-center md:text-left">
-                <h3 className="text-2xl font-black mb-2">Restez informé en continu</h3>
+                <h3 className="text-2xl font-black mb-2">Restez informé en temps réel</h3>
                 <p className="text-blue-100 dark:text-blue-200 text-sm">Abonnez-vous à notre newsletter pour recevoir les alertes info directement dans votre boîte mail.</p>
               </div>
               <form onSubmit={handleSubscribe} className="flex w-full md:w-auto gap-2">
+                {/* Honeypot field (hidden from users) */}
+                <div className="hidden" aria-hidden="true">
+                  <input 
+                    type="text" 
+                    name="full_name" 
+                    tabIndex={-1} 
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
                 <input 
                   type="email" 
                   placeholder="Votre email" 
