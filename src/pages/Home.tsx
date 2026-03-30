@@ -21,11 +21,21 @@ export default function Home() {
     if (!email) return;
     
     try {
+      // 1. Save to Firestore (as backup)
       await addDoc(collection(db, 'subscribers'), {
         email,
         subscribedAt: new Date().toISOString(),
         status: 'active'
       });
+      
+      // 2. Call Brevo API via our server
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      if (!response.ok) throw new Error('Failed to subscribe');
       
       toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
       setEmail('');
@@ -69,7 +79,7 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-gray-950 transition-colors duration-300">
       <SEO />
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -81,11 +91,11 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Recent News */}
           <div className="lg:col-span-8">
-            <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
-              <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
+            <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-gray-800 pb-4">
+              <h2 className="text-2xl font-black tracking-tight flex items-center gap-2 dark:text-white">
                 <Zap className="text-yellow-500" fill="currentColor" /> Dernières Actualités
               </h2>
-              <Link to="/category/national" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1">
+              <Link to="/category/national" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
                 Voir tout <ChevronRight size={16} />
               </Link>
             </div>
@@ -97,7 +107,7 @@ export default function Home() {
             </div>
 
             {/* Middle Banner */}
-            <div className="my-12 p-8 bg-blue-600 rounded-2xl text-white flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="my-12 p-8 bg-blue-600 rounded-3xl text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-blue-500/20">
               <div className="max-w-md text-center md:text-left">
                 <h3 className="text-2xl font-black mb-2">Restez informé en temps réel</h3>
                 <p className="text-blue-100 text-sm">Abonnez-vous à notre newsletter pour recevoir les alertes info directement dans votre boîte mail.</p>
@@ -108,10 +118,10 @@ export default function Home() {
                   placeholder="Votre email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="px-4 py-2 rounded-lg text-black w-full md:w-64 focus:ring-2 focus:ring-blue-400 outline-none" 
+                  className="px-4 py-3 rounded-xl text-black w-full md:w-64 focus:ring-2 focus:ring-blue-400 outline-none" 
                   required
                 />
-                <button type="submit" className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-900 transition-colors whitespace-nowrap">S'abonner</button>
+                <button type="submit" className="bg-black text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors whitespace-nowrap">S'abonner</button>
               </form>
             </div>
 
@@ -127,13 +137,13 @@ export default function Home() {
           <div className="lg:col-span-4">
             <div className="sticky top-24">
               <div className="mb-12">
-                <h2 className="text-xl font-black tracking-tight flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+                <h2 className="text-xl font-black tracking-tight flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4 dark:text-white">
                   <TrendingUp className="text-red-500" /> Tendances
                 </h2>
                 <div className="space-y-6">
                   {trending.map((article, idx) => (
                     <div key={article.id} className="flex gap-4">
-                      <span className="text-3xl font-black text-gray-100 italic">{idx + 1}</span>
+                      <span className="text-3xl font-black text-gray-100 dark:text-gray-800 italic">{idx + 1}</span>
                       <ArticleCard article={article} variant="horizontal" />
                     </div>
                   ))}
@@ -141,14 +151,14 @@ export default function Home() {
               </div>
 
               {/* Social Box */}
-              <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                <h3 className="font-bold mb-4">Suivez-nous sur Facebook</h3>
-                <p className="text-sm text-gray-500 mb-6">Rejoignez plus de 300 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800">
+                <h3 className="font-bold mb-4 dark:text-white">Suivez-nous sur Facebook</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 300 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
                 <a 
                   href="https://www.facebook.com/fcbkfmcomores" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="block w-full bg-[#1877F2] text-white text-center py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors"
+                  className="block w-full bg-[#1877F2] text-white text-center py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
                 >
                   Voir notre page Facebook
                 </a>

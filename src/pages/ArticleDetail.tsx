@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
@@ -91,7 +90,7 @@ export default function ArticleDetail() {
   }
 
   return (
-    <article className="bg-white">
+    <article className="bg-white dark:bg-gray-950 transition-colors duration-300">
       <SEO 
         title={article.title} 
         description={article.excerpt} 
@@ -100,66 +99,66 @@ export default function ArticleDetail() {
       />
       {/* Header */}
       <header className="max-w-4xl mx-auto px-4 pt-12 pb-8">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 mb-6">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-6">
           <Link to={`/category/${article.category}`} className="hover:underline">{article.category}</Link>
           <ChevronRight size={12} />
-          <span className="text-gray-400">Article</span>
+          <span className="text-gray-400 dark:text-gray-500">Article</span>
         </div>
-        <h1 className="text-3xl sm:text-5xl font-black text-black leading-tight mb-8">
+        <h1 className="text-3xl sm:text-5xl font-black text-black dark:text-white leading-tight mb-8">
           {article.title}
         </h1>
-        <p className="text-xl text-gray-600 leading-relaxed mb-8 italic">
+        <p className="text-xl text-gray-600 dark:text-gray-400 leading-relaxed mb-8 italic">
           {article.excerpt}
         </p>
         
-        <div className="flex flex-wrap items-center justify-between gap-6 py-6 border-y border-gray-100">
+        <div className="flex flex-wrap items-center justify-between gap-6 py-6 border-y border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-4">
             {author?.photo && (
               <img src={author.photo} alt={author.name} className="w-12 h-12 rounded-full object-cover" />
             )}
             <div>
-              <span className="block text-sm font-bold text-black">{author?.name || 'Rédaction FCBK FM'}</span>
-              <span className="block text-xs text-gray-400 uppercase tracking-wider">{formatDate(article.publishedAt || article.createdAt)}</span>
+              <span className="block text-sm font-bold text-black dark:text-white">{author?.name || 'Rédaction FCBK FM'}</span>
+              <span className="block text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider">{formatDate(article.publishedAt || article.createdAt)}</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={copyLink} className="p-2 rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"><LinkIcon size={18} /></button>
+            <button onClick={copyLink} className="p-2 rounded-full bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><LinkIcon size={18} /></button>
             <a href={`https://www.facebook.com/sharer/sharer.php?u=${window.location.href}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-[#1877F2] text-white hover:bg-blue-700 transition-colors"><Facebook size={18} /></a>
-            <a href={`https://twitter.com/intent/tweet?url=${window.location.href}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-black text-white hover:bg-gray-800 transition-colors"><Twitter size={18} /></a>
+            <a href={`https://twitter.com/intent/tweet?url=${window.location.href}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-black dark:bg-white dark:text-black text-white hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"><Twitter size={18} /></a>
           </div>
         </div>
       </header>
 
       {/* Main Image */}
       <div className="max-w-5xl mx-auto px-4 mb-12">
-        <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-gray-100">
+        <div className="aspect-[16/9] overflow-hidden rounded-3xl bg-gray-100 dark:bg-gray-900 shadow-2xl shadow-black/10">
           <img src={article.mainImage} alt={article.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-3xl mx-auto px-4 prose prose-lg prose-blue mb-20">
+      <div className="max-w-3xl mx-auto px-4 prose prose-lg prose-blue dark:prose-invert mb-20">
         <ReactMarkdown>{article.content}</ReactMarkdown>
       </div>
 
       {/* Author Bio */}
       {author && (
         <div className="max-w-3xl mx-auto px-4 mb-20">
-          <div className="bg-gray-50 rounded-2xl p-8 flex flex-col sm:flex-row items-center gap-8 border border-gray-100">
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 flex flex-col sm:flex-row items-center gap-8 border border-gray-100 dark:border-gray-800">
             <img src={author.photo} alt={author.name} className="w-24 h-24 rounded-full object-cover" />
             <div className="text-center sm:text-left">
-              <h3 className="text-lg font-bold mb-2">À propos de {author.name}</h3>
-              <p className="text-gray-600 text-sm leading-relaxed mb-4">{author.bio}</p>
-              <Link to={`/author/${author.id}`} className="text-blue-600 text-xs font-bold uppercase tracking-widest hover:underline">Voir ses articles</Link>
+              <h3 className="text-lg font-bold mb-2 dark:text-white">À propos de {author.name}</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">{author.bio}</p>
+              <Link to={`/author/${author.id}`} className="text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-widest hover:underline">Voir ses articles</Link>
             </div>
           </div>
         </div>
       )}
 
       {/* Related News */}
-      <section className="bg-gray-50 py-20">
+      <section className="bg-gray-50 dark:bg-gray-900 py-20 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-black tracking-tight mb-12 flex items-center gap-3">
+          <h2 className="text-2xl font-black tracking-tight mb-12 flex items-center gap-3 dark:text-white">
             <span className="w-8 h-1 bg-blue-600 block"></span> Sur le même sujet
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Article } from '../types';
@@ -15,7 +14,7 @@ export default function ArticleCard({ article, variant = 'medium' }: ArticleCard
   if (variant === 'horizontal') {
     return (
       <Link to={`/article/${article.slug}`} className="group flex gap-4 items-start">
-        <div className="w-24 h-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+        <div className="w-24 h-24 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900 transition-colors">
           <img
             src={article.mainImage}
             alt={article.title}
@@ -25,13 +24,13 @@ export default function ArticleCard({ article, variant = 'medium' }: ArticleCard
           />
         </div>
         <div className="flex-grow">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-1 block">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1 block">
             {article.category}
           </span>
-          <h3 className="text-sm font-bold leading-tight group-hover:text-blue-600 transition-colors line-clamp-2">
+          <h3 className="text-sm font-bold leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 dark:text-white">
             {article.title}
           </h3>
-          <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
+          <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 dark:text-gray-500">
             <span className="flex items-center gap-1"><Clock size={10} /> {formatDate(article.publishedAt || article.createdAt)}</span>
           </div>
         </div>
@@ -71,7 +70,7 @@ export default function ArticleCard({ article, variant = 'medium' }: ArticleCard
 
   return (
     <Link to={`/article/${article.slug}`} className="group block">
-      <div className="aspect-[16/10] overflow-hidden rounded-xl bg-gray-100 mb-4">
+      <div className="aspect-[16/10] overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-900 mb-4 transition-colors">
         <img
           src={article.mainImage}
           alt={article.title}
@@ -81,16 +80,16 @@ export default function ArticleCard({ article, variant = 'medium' }: ArticleCard
         />
       </div>
       <div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-2 block">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2 block">
           {article.category}
         </span>
-        <h3 className="text-lg font-bold leading-snug group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
+        <h3 className="text-lg font-bold leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-2 dark:text-white">
           {article.title}
         </h3>
-        <p className="text-gray-500 text-sm line-clamp-2 mb-3">
+        <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-2 mb-3">
           {article.excerpt}
         </p>
-        <div className="flex items-center gap-4 text-[10px] text-gray-400 font-medium">
+        <div className="flex items-center gap-4 text-[10px] text-gray-400 dark:text-gray-500 font-medium">
           <span className="flex items-center gap-1 uppercase tracking-wider"><Clock size={12} /> {formatDate(article.publishedAt || article.createdAt)}</span>
         </div>
       </div>
