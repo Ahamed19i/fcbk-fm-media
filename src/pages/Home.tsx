@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, limit, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
@@ -22,19 +22,24 @@ export default function Home() {
     if (!emailToSubscribe) return;
     
     try {
-      // 1. Vérifier si l'email existe déjà dans Firestore pour éviter les doublons
-      const subscribersRef = collection(db, 'subscribers');
-      const q = query(subscribersRef, where('email', '==', emailToSubscribe));
-      const querySnapshot = await getDocs(q);
+      // 1. Vérifier si l'email existe déjà dans Firestore (en utilisant l'email comme ID)
+      const { doc, getDoc, setDoc } = await import('firebase/firestore');
+      const subscriberDocRef = doc(db, 'subscribers', emailToSubscribe);
       
-      if (!querySnapshot.empty) {
-        toast.info("Vous êtes déjà inscrit à notre newsletter avec cet email.");
-        setEmail('');
-        return;
+      try {
+        const docSnap = await getDoc(subscriberDocRef);
+        if (docSnap.exists()) {
+          toast.info("Vous êtes déjà inscrit à notre newsletter avec cet email.");
+          setEmail('');
+          return;
+        }
+      } catch (checkError) {
+        // Si la vérification échoue (ex: permissions), on continue quand même pour tenter l'inscription
+        console.warn("Impossible de vérifier l'existence de l'abonné, tentative d'inscription directe.");
       }
 
       // 2. Enregistrer dans Firestore
-      await addDoc(collection(db, 'subscribers'), {
+      await setDoc(subscriberDocRef, {
         email: emailToSubscribe,
         subscribedAt: new Date().toISOString(),
         status: 'active'
@@ -54,7 +59,9 @@ export default function Home() {
         // Si Brevo échoue mais Firestore a réussi, on informe quand même d'un succès partiel ou on gère l'erreur
         const errorData = await response.json();
         console.error("Erreur API Brevo:", errorData);
-        toast.error("Une erreur est survenue lors de la synchronisation avec Brevo. Veuillez réessayer.");
+        // On ne montre pas d'erreur fatale si Firestore a réussi (car l'admin verra l'email)
+        toast.success('Merci pour votre inscription !');
+        setEmail('');
       }
     } catch (error) {
       console.error("Erreur lors de l'inscription:", error);
