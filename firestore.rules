@@ -1,4 +1,5 @@
 
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,7 +13,9 @@ service cloud.firestore {
     
     // Use Custom Claims for roles (request.auth.token.role)
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'admin';
+      return isAuthenticated() && 
+             (request.auth.token.role == 'admin' || 
+              (request.auth.token.email == "ahassanimhoma20@gmail.com" && request.auth.token.email_verified == true));
     }
     
     function isEditor() {
@@ -64,6 +67,14 @@ service cloud.firestore {
              data.email is string && data.email.size() >= 5 && data.email.size() <= 255 &&
              data.subscribedAt is string &&
              (!('status' in data) || data.status in ['active', 'unsubscribed']);
+    }
+
+    function isValidComment(data) {
+      return hasOnlyAllowedFields(['articleId', 'userId', 'userName', 'userPhoto', 'content', 'createdAt', 'status']) &&
+             data.articleId is string &&
+             data.userId == request.auth.uid &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 2000 &&
+             data.createdAt is string;
     }
 
     // ===============================================================
@@ -123,6 +134,13 @@ service cloud.firestore {
     match /system_config/{configId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // Comments
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidComment(request.resource.data);
+      allow update, delete: if isEditor() || (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
   }
 }

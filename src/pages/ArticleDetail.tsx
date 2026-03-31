@@ -3,18 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Article, Author } from '../types';
+import { Article, UserProfile } from '../types';
 import { formatDate } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
-import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight } from 'lucide-react';
+import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight, User as UserIcon } from 'lucide-react';
 import ArticleCard from '../components/ArticleCard';
+import Comments from '../components/Comments';
 import { toast } from 'sonner';
 import SEO from '../components/SEO';
 
 export default function ArticleDetail() {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
-  const [author, setAuthor] = useState<Author | null>(null);
+  const [author, setAuthor] = useState<UserProfile | null>(null);
   const [related, setRelated] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +23,6 @@ export default function ArticleDetail() {
     const fetchArticle = async () => {
       setLoading(true);
       try {
-        // In a real app, we'd query by slug. For simplicity, we'll assume slug is the ID or we'll query.
         const q = query(collection(db, 'articles'), where('slug', '==', slug), limit(1));
         const querySnapshot = await getDocs(q);
         
@@ -36,11 +36,11 @@ export default function ArticleDetail() {
             views: increment(1)
           });
 
-          // Fetch author
+          // Fetch author from users collection
           if (articleData.authorId) {
-            const authorSnap = await getDoc(doc(db, 'authors', articleData.authorId));
-            if (authorSnap.exists()) {
-              setAuthor({ id: authorSnap.id, ...authorSnap.data() } as Author);
+            const userSnap = await getDoc(doc(db, 'users', articleData.authorId));
+            if (userSnap.exists()) {
+              setAuthor({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
             }
           }
 
@@ -49,12 +49,13 @@ export default function ArticleDetail() {
             collection(db, 'articles'),
             where('category', '==', articleData.category),
             where('status', '==', 'published'),
-            limit(4)
+            limit(5)
           );
           const relatedSnap = await getDocs(relatedQ);
           setRelated(relatedSnap.docs
             .map(d => ({ id: d.id, ...d.data() } as Article))
             .filter(a => a.id !== articleData.id)
+            .slice(0, 4)
           );
         }
       } catch (error) {
@@ -113,11 +114,15 @@ export default function ArticleDetail() {
         
         <div className="flex flex-wrap items-center justify-between gap-6 py-6 border-y border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-4">
-            {author?.photo && (
-              <img src={author.photo} alt={author.name} className="w-12 h-12 rounded-full object-cover" />
+            {author?.photoURL ? (
+              <img src={author.photoURL} alt={author.displayName} className="w-12 h-12 rounded-full object-cover border-2 border-blue-600" />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center border-2 border-gray-200 dark:border-gray-700">
+                <UserIcon size={20} className="text-gray-400" />
+              </div>
             )}
             <div>
-              <span className="block text-sm font-bold text-black dark:text-white">{author?.name || 'Rédaction FCBK FM'}</span>
+              <span className="block text-sm font-bold text-black dark:text-white">{author?.displayName || 'Rédaction FCBK FM'}</span>
               <span className="block text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider">{formatDate(article.publishedAt || article.createdAt)}</span>
             </div>
           </div>
@@ -130,44 +135,73 @@ export default function ArticleDetail() {
       </header>
 
       {/* Main Image */}
-      <div className="max-w-5xl mx-auto px-4 mb-12">
-        <div className="aspect-[16/9] overflow-hidden rounded-3xl bg-gray-100 dark:bg-gray-900 shadow-2xl shadow-black/10">
-          <img src={article.mainImage} alt={article.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+      <div className="max-w-4xl mx-auto px-4 mb-12">
+        <div className="aspect-[16/9] overflow-hidden rounded-3xl bg-gray-100 dark:bg-gray-900 shadow-2xl shadow-black/5">
+          <img src={article.mainImage} alt={article.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" referrerPolicy="no-referrer" />
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-3xl mx-auto px-4 prose prose-lg prose-blue dark:prose-invert mb-20">
-        <ReactMarkdown>{article.content}</ReactMarkdown>
-      </div>
+      {/* Content & Sidebar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          {/* Main Content */}
+          <div className="lg:col-span-8">
+            <div className="prose prose-lg prose-blue dark:prose-invert max-w-none mb-16 prose-img:rounded-2xl prose-img:shadow-lg prose-img:mx-auto">
+              <ReactMarkdown>{article.content}</ReactMarkdown>
+            </div>
 
-      {/* Author Bio */}
-      {author && (
-        <div className="max-w-3xl mx-auto px-4 mb-20">
-          <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 flex flex-col sm:flex-row items-center gap-8 border border-gray-100 dark:border-gray-800">
-            <img src={author.photo} alt={author.name} className="w-24 h-24 rounded-full object-cover" />
-            <div className="text-center sm:text-left">
-              <h3 className="text-lg font-bold mb-2 dark:text-white">À propos de {author.name}</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">{author.bio}</p>
-              <Link to={`/author/${author.id}`} className="text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-widest hover:underline">Voir ses articles</Link>
+            {/* Author Bio */}
+            {author && (
+              <div className="mb-16">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 flex flex-col sm:flex-row items-center gap-8 border border-gray-100 dark:border-gray-800">
+                  {author.photoURL ? (
+                    <img src={author.photoURL} alt={author.displayName} className="w-24 h-24 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
+                      <UserIcon size={40} className="text-gray-400" />
+                    </div>
+                  )}
+                  <div className="text-center sm:text-left">
+                    <h3 className="text-lg font-bold mb-2 dark:text-white">À propos de {author.displayName}</h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">{author.bio || "Journaliste passionné couvrant l'actualité pour FCBK FM."}</p>
+                    <div className="flex items-center gap-4 justify-center sm:justify-start">
+                      <span className="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">{author.role}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Comments Section */}
+            <Comments articleId={article.id} />
+          </div>
+
+          {/* Sidebar: Related Articles */}
+          <div className="lg:col-span-4">
+            <div className="sticky top-24">
+              <h2 className="text-xl font-black tracking-tight mb-8 flex items-center gap-3 dark:text-white">
+                <span className="w-8 h-1 bg-blue-600 block"></span> Sur le même sujet
+              </h2>
+              <div className="space-y-8">
+                {related.length > 0 ? (
+                  related.map(item => (
+                    <ArticleCard key={item.id} article={item} variant="horizontal" />
+                  ))
+                ) : (
+                  <p className="text-gray-400 italic text-sm">Pas d'autres articles dans cette catégorie.</p>
+                )}
+              </div>
+
+              {/* Newsletter Promo */}
+              <div className="mt-12 p-8 bg-blue-600 rounded-3xl text-white shadow-xl shadow-blue-500/20">
+                <h3 className="font-black text-xl mb-2">L'info en direct</h3>
+                <p className="text-blue-100 text-sm mb-6">Ne manquez aucune alerte info. Rejoignez notre communauté.</p>
+                <Link to="/" className="block w-full bg-white text-blue-600 text-center py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors">S'abonner</Link>
+              </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Related News */}
-      <section className="bg-gray-50 dark:bg-gray-900 py-20 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-black tracking-tight mb-12 flex items-center gap-3 dark:text-white">
-            <span className="w-8 h-1 bg-blue-600 block"></span> Sur le même sujet
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {related.map(item => (
-              <ArticleCard key={item.id} article={item} />
-            ))}
-          </div>
-        </div>
-      </section>
+      </div>
     </article>
   );
 }

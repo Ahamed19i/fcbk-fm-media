@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -23,6 +22,8 @@ export default function Home() {
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+    
+    const emailToSubscribe = email.trim().toLowerCase();
     
     // Honeypot check: if this field is filled, it's likely a bot
     if (honeypot) {
@@ -221,7 +222,7 @@ export default function Home() {
               {/* Social Box */}
               <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800">
                 <h3 className="font-bold mb-4 dark:text-white">Suivez-nous sur Facebook</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 300 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 220 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
                 <a 
                   href="https://www.facebook.com/fcbkfmcomores" 
                   target="_blank" 
