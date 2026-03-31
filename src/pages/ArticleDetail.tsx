@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment, orderBy } from 'firebase/firestore';
@@ -7,7 +6,7 @@ import { db } from '../lib/firebase';
 import { Article, UserProfile } from '../types';
 import { formatDate, normalizeDate } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
-import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight, User as UserIcon } from 'lucide-react';
+import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight, User as UserIcon, Zap } from 'lucide-react';
 import ArticleCard from '../components/ArticleCard';
 import NewsletterBox from '../components/NewsletterBox';
 import { toast } from 'sonner';
@@ -23,6 +22,8 @@ export default function ArticleDetail() {
   useEffect(() => {
     const fetchArticle = async () => {
       setLoading(true);
+      setAuthor(null);
+      setRelated([]);
       try {
         const q = query(collection(db, 'articles'), where('slug', '==', slug), limit(1));
         const querySnapshot = await getDocs(q);
@@ -48,15 +49,29 @@ export default function ArticleDetail() {
           }
 
           // Fetch author from users collection
+          const defaultAuthor: UserProfile = {
+            uid: 'default',
+            displayName: 'Rédaction FCBK FM',
+            role: 'journalist',
+            bio: "Journaliste passionné couvrant l'actualité pour FCBK FM.",
+            email: '',
+            createdAt: ''
+          };
+
           if (articleData.authorId) {
             try {
               const userSnap = await getDoc(doc(db, 'users', articleData.authorId));
               if (userSnap.exists()) {
                 setAuthor({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
+              } else {
+                setAuthor(defaultAuthor);
               }
             } catch (e) {
               console.warn("Failed to fetch author:", e);
+              setAuthor(defaultAuthor);
             }
+          } else {
+            setAuthor(defaultAuthor);
           }
 
           // Fetch related articles (Strictly same category)
