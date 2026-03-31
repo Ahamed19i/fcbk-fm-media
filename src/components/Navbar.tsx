@@ -15,6 +15,9 @@ const CATEGORIES = [
   { name: 'Politique', slug: 'politique' },
   { name: 'Économie', slug: 'economie' },
   { name: 'Sport', slug: 'sport' },
+  { name: 'Culture', slug: 'culture' },
+  { name: 'Diaspora', slug: 'diaspora' },
+  { name: 'Société', slug: 'societe' },
   { name: 'International', slug: 'international' },
 ];
 
@@ -29,6 +32,13 @@ export default function Navbar({ user, profile }: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+
+  const currentDate = new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
 
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
@@ -63,93 +73,81 @@ export default function Navbar({ user, profile }: NavbarProps) {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'editor' || profile?.role === 'journalist';
 
   return (
-    <nav className="bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50 transition-colors duration-300">
+    <nav className="bg-white dark:bg-gray-950 transition-colors duration-300 sticky top-0 z-50 shadow-sm">
+      {/* Top Bar */}
+      <div className="bg-black text-white py-2 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-4">
+            <span className="hidden sm:inline">{currentDate}</span>
+            <span className="text-gray-400 hidden md:inline">FCBK FM - Le Média de Référence des Comores</span>
+          </div>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <button
+              onClick={toggleTheme}
+              className="p-1 rounded-full hover:bg-gray-800 transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+            
+            {user ? (
+              <div className="flex items-center gap-4">
+                <span className="hidden sm:inline text-gray-300">{user.displayName}</span>
+                {isAdmin && (
+                  <Link to="/admin" className="flex items-center gap-1.5 hover:text-blue-400 transition-colors">
+                    <LayoutDashboard size={14} /> Admin
+                  </Link>
+                )}
+                <button onClick={handleLogout} className="hover:text-red-400 transition-colors">
+                  Déconnexion
+                </button>
+              </div>
+            ) : (
+              <button onClick={handleGoogleSignIn} className="hover:text-blue-400 transition-colors">
+                Connexion
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-20">
+        <div className="flex justify-between items-center h-20">
           <div className="flex items-center">
             <Link to="/" className="text-3xl font-black tracking-tighter text-black dark:text-white">
               FCBK<span className="text-blue-600">FM</span>
             </Link>
-            <div className="hidden md:ml-10 md:flex md:space-x-8">
-              {CATEGORIES.map((cat) => (
-                <Link
-                  key={cat.slug}
-                  to={`/category/${cat.slug}`}
-                  className="text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors uppercase tracking-widest"
-                >
-                  {cat.name}
-                </Link>
-              ))}
-            </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
+            {CATEGORIES.map((cat) => (
+              <Link
+                key={cat.slug}
+                to={`/category/${cat.slug}`}
+                className="text-xs xl:text-sm font-black text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors uppercase tracking-widest"
+              >
+                {cat.name}
+              </Link>
+            ))}
             <button
-              onClick={toggleTheme}
-              className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-
-            <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               <SearchIcon size={20} />
             </button>
+          </div>
 
-            {user ? (
-              <div className="flex items-center gap-4">
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    <LayoutDashboard size={14} /> Admin
-                  </Link>
-                )}
-                <div className="relative group">
-                  <button className="flex items-center gap-2">
-                    {user.photoURL ? (
-                      <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full border-2 border-blue-600" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center border-2 border-gray-200 dark:border-gray-700">
-                        <UserIcon size={16} className="text-gray-400" />
-                      </div>
-                    )}
-                  </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                    <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 mb-2">
-                      <p className="text-xs font-bold text-black dark:text-white truncate">{user.displayName}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{user.email}</p>
-                    </div>
-                    {isAdmin && (
-                      <Link to="/admin" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 sm:hidden">
-                        <LayoutDashboard size={14} /> Dashboard
-                      </Link>
-                    )}
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                      <LogOut size={14} /> Déconnexion
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={handleGoogleSignIn}
-                className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                <UserIcon size={14} /> Connexion
-              </button>
-            )}
-
+          <div className="lg:hidden flex items-center gap-4">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 text-gray-900 dark:text-gray-100"
+            >
+              <SearchIcon size={20} />
+            </button>
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="md:hidden p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+              className="p-2 text-gray-900 dark:text-gray-100"
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -159,25 +157,17 @@ export default function Navbar({ user, profile }: NavbarProps) {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 py-4 px-4 space-y-4">
+        <div className="lg:hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 py-6 px-4 space-y-6">
           {CATEGORIES.map((cat) => (
             <Link
               key={cat.slug}
               to={`/category/${cat.slug}`}
               onClick={() => setIsOpen(false)}
-              className="block text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 uppercase tracking-widest"
+              className="block text-sm font-black text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 uppercase tracking-widest"
             >
               {cat.name}
             </Link>
           ))}
-          {!user && (
-            <button
-              onClick={handleGoogleSignIn}
-              className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest"
-            >
-              <UserIcon size={16} /> Connexion
-            </button>
-          )}
         </div>
       )}
 

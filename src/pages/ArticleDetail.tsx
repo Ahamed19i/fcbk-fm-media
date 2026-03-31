@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
@@ -8,7 +7,6 @@ import { formatDate } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight, User as UserIcon } from 'lucide-react';
 import ArticleCard from '../components/ArticleCard';
-import Comments from '../components/Comments';
 import NewsletterBox from '../components/NewsletterBox';
 import { toast } from 'sonner';
 import SEO from '../components/SEO';
@@ -50,14 +48,20 @@ export default function ArticleDetail() {
             collection(db, 'articles'),
             where('category', '==', articleData.category),
             where('status', '==', 'published'),
-            limit(5)
+            limit(10) // Fetch more to filter current and ensure enough
           );
           const relatedSnap = await getDocs(relatedQ);
-          setRelated(relatedSnap.docs
+          const filteredRelated = relatedSnap.docs
             .map(d => ({ id: d.id, ...d.data() } as Article))
-            .filter(a => a.id !== articleData.id)
-            .slice(0, 4)
-          );
+            .filter(a => a.id !== articleData.id);
+          
+          // If only 1 article in category (the current one), filteredRelated will be empty
+          // If 2 or more, show up to 4
+          if (filteredRelated.length >= 1) {
+            setRelated(filteredRelated.slice(0, 4));
+          } else {
+            setRelated([]);
+          }
         }
       } catch (error) {
         console.error("Error fetching article:", error);
@@ -172,31 +176,26 @@ export default function ArticleDetail() {
                 </div>
               </div>
             )}
-
-            {/* Comments Section */}
-            <Comments articleId={article.id} />
           </div>
 
           {/* Sidebar: Related Articles */}
           <div className="lg:col-span-4">
             <div className="sticky top-24">
-              <h2 className="text-xl font-black tracking-tight mb-8 flex items-center gap-3 dark:text-white">
-                <span className="w-8 h-1 bg-blue-600 block"></span> Sur le même sujet
-              </h2>
-              <div className="space-y-8">
-                {related.length > 0 ? (
-                  related.map(item => (
-                    <ArticleCard key={item.id} article={item} variant="horizontal" />
-                  ))
-                ) : (
-                  <p className="text-gray-400 italic text-sm">Pas d'autres articles dans cette catégorie.</p>
-                )}
-              </div>
+              {related.length > 0 && (
+                <>
+                  <h2 className="text-xl font-black tracking-tight mb-8 flex items-center gap-3 dark:text-white">
+                    <span className="w-8 h-1 bg-blue-600 block"></span> Sur le même sujet
+                  </h2>
+                  <div className="space-y-8 mb-12">
+                    {related.map(item => (
+                      <ArticleCard key={item.id} article={item} variant="horizontal" />
+                    ))}
+                  </div>
+                </>
+              )}
 
               {/* Newsletter Promo */}
-              <div className="mt-12">
-                <NewsletterBox variant="vertical" />
-              </div>
+              <NewsletterBox variant="vertical" />
             </div>
           </div>
         </div>
