@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Article, UserProfile } from '../types';
-import { formatDate } from '../lib/utils';
+import { formatDate, normalizeDate } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight, User as UserIcon } from 'lucide-react';
 import ArticleCard from '../components/ArticleCard';
@@ -28,53 +28,97 @@ export default function ArticleDetail() {
         
         if (!querySnapshot.empty) {
           const docData = querySnapshot.docs[0];
-          const articleData = { id: docData.id, ...docData.data() } as Article;
+          const rawData = docData.data();
+          const articleData = { 
+            id: docData.id, 
+            ...rawData,
+            authorId: rawData.authorId || (rawData as any).authorid
+          } as Article;
+          
           setArticle(articleData);
 
           // Increment views
-          await updateDoc(doc(db, 'articles', docData.id), {
-            views: increment(1)
-          });
+          try {
+            await updateDoc(doc(db, 'articles', docData.id), {
+              views: increment(1)
+            });
+          } catch (e) {
+            console.warn("Failed to increment views:", e);
+          }
 
           // Fetch author from users collection
-          const authorId = articleData.authorId || (docData.data() as any).authorid;
-          if (authorId) {
-            const userSnap = await getDoc(doc(db, 'users', authorId));
-            if (userSnap.exists()) {
-              setAuthor({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
+          if (articleData.authorId) {
+            try {
+              const userSnap = await getDoc(doc(db, 'users', articleData.authorId));
+              if (userSnap.exists()) {
+                setAuthor({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
+              }
+            } catch (e) {
+              console.warn("Failed to fetch author:", e);
             }
           }
 
-          // Fetch related articles from the same category
-          // We fetch a larger batch and filter/sort in memory to be more robust
-          const relatedQ = query(
-            collection(db, 'articles'),
-            where('category', '==', articleData.category),
-            limit(20)
-          );
+          // Fetch related articles
+          let finalRelated: Article[] = [];
           
-          const relatedSnap = await getDocs(relatedQ);
-          const filteredRelated = relatedSnap.docs
-            .map(d => {
-              const data = d.data() as any;
-              return { 
-                id: d.id, 
-                ...data,
-                authorId: data.authorId || data.authorid
-              } as Article;
-            })
-            .filter(a => 
-              a.id !== articleData.id && 
-              (a.status === 'published' || !a.status)
-            )
-            .sort((a, b) => {
-              const dateA = new Date(a.publishedAt || a.createdAt || 0).getTime();
-              const dateB = new Date(b.publishedAt || b.createdAt || 0).getTime();
-              return dateB - dateA;
-            })
+          try {
+            // 1. Try to fetch from the same category first
+            const relatedQ = query(
+              collection(db, 'articles'),
+              where('category', '==', articleData.category),
+              limit(10)
+            );
+            
+            const relatedSnap = await getDocs(relatedQ);
+            finalRelated = relatedSnap.docs
+              .map(d => {
+                const data = d.data();
+                return { 
+                  id: d.id, 
+                  ...data,
+                  authorId: data.authorId || (data as any).authorid
+                } as Article;
+              })
+              .filter(a => a.id !== articleData.id && (a.status === 'published' || !a.status));
+          } catch (e) {
+            console.warn("Failed to fetch related by category:", e);
+          }
+
+          // 2. If we don't have 4 articles, fetch latest articles from any category to fill the gap
+          if (finalRelated.length < 4) {
+            try {
+              const latestQ = query(
+                collection(db, 'articles'),
+                limit(10)
+              );
+              const latestSnap = await getDocs(latestQ);
+              const latestArticles = latestSnap.docs
+                .map(d => {
+                  const data = d.data();
+                  return { 
+                    id: d.id, 
+                    ...data,
+                    authorId: data.authorId || (data as any).authorid
+                  } as Article;
+                })
+                .filter(a => 
+                  a.id !== articleData.id && 
+                  !finalRelated.find(r => r.id === a.id) &&
+                  (a.status === 'published' || !a.status)
+                );
+              
+              finalRelated = [...finalRelated, ...latestArticles];
+            } catch (e) {
+              console.warn("Failed to fetch latest articles:", e);
+            }
+          }
+          
+          // Sort by date and slice to 4
+          finalRelated = finalRelated
+            .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime())
             .slice(0, 4);
           
-          setRelated(filteredRelated);
+          setRelated(finalRelated);
         }
       } catch (error) {
         console.error("Error fetching article:", error);

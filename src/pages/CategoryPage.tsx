@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
 import { ChevronRight, Zap } from 'lucide-react';
 import SEO from '../components/SEO';
+import { normalizeDate } from '../lib/utils';
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -21,28 +22,28 @@ export default function CategoryPage() {
         if (slug === 'all') {
           q = query(
             collection(db, 'articles'),
-            where('status', '==', 'published'),
-            orderBy('createdAt', 'desc'),
-            limit(40)
+            limit(50)
           );
         } else {
           q = query(
             collection(db, 'articles'),
             where('category', '==', slug),
-            where('status', '==', 'published'),
-            orderBy('createdAt', 'desc'),
-            limit(40)
+            limit(50)
           );
         }
         const querySnapshot = await getDocs(q);
-        setArticles(querySnapshot.docs.map(d => {
+        const fetched = querySnapshot.docs.map(d => {
           const data = d.data() as any;
           return { 
             id: d.id, 
             ...data,
             authorId: data.authorId || data.authorid
           } as Article;
-        }));
+        })
+        .filter(a => a.status === 'published' || !a.status)
+        .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime());
+        
+        setArticles(fetched);
       } catch (error) {
         console.error("Error fetching articles:", error);
       } finally {

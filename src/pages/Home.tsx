@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
@@ -8,6 +7,7 @@ import { ChevronRight, TrendingUp, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import NewsletterBox from '../components/NewsletterBox';
+import { normalizeDate } from '../lib/utils';
 
 export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -20,9 +20,7 @@ export default function Home() {
       try {
         const q = query(
           collection(db, 'articles'),
-          where('status', '==', 'published'),
-          orderBy('createdAt', 'desc'),
-          limit(10)
+          limit(50)
         );
         const querySnapshot = await getDocs(q);
         const fetchedArticles = querySnapshot.docs.map(doc => {
@@ -32,7 +30,9 @@ export default function Home() {
             ...data,
             authorId: data.authorId || data.authorid
           } as Article;
-        });
+        })
+        .filter(a => a.status === 'published' || !a.status)
+        .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime());
         
         setArticles(fetchedArticles);
         setBreakingNews(fetchedArticles.find(a => a.isBreaking) || fetchedArticles[0]);
