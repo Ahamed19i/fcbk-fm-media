@@ -37,7 +37,11 @@ export default function CategoryPage() {
         const querySnapshot = await getDocs(q);
         setArticles(querySnapshot.docs.map(d => {
           const data = d.data() as any;
-          return { id: d.id, ...data } as Article;
+          return { 
+            id: d.id, 
+            ...data,
+            authorId: data.authorId || data.authorid
+          } as Article;
         }));
       } catch (error) {
         console.error("Error fetching articles:", error);

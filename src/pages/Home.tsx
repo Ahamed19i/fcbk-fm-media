@@ -25,7 +25,14 @@ export default function Home() {
           limit(10)
         );
         const querySnapshot = await getDocs(q);
-        const fetchedArticles = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+        const fetchedArticles = querySnapshot.docs.map(doc => {
+          const data = doc.data() as any;
+          return { 
+            id: doc.id, 
+            ...data,
+            authorId: data.authorId || data.authorid
+          } as Article;
+        });
         
         setArticles(fetchedArticles);
         setBreakingNews(fetchedArticles.find(a => a.isBreaking) || fetchedArticles[0]);

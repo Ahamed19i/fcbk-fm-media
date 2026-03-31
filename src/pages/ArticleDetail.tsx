@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Article, UserProfile } from '../types';
 import { formatDate } from '../lib/utils';
@@ -37,30 +37,44 @@ export default function ArticleDetail() {
           });
 
           // Fetch author from users collection
-          if (articleData.authorId) {
-            const userSnap = await getDoc(doc(db, 'users', articleData.authorId));
+          const authorId = articleData.authorId || (docData.data() as any).authorid;
+          if (authorId) {
+            const userSnap = await getDoc(doc(db, 'users', authorId));
             if (userSnap.exists()) {
               setAuthor({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
             }
           }
 
-          // Fetch related
+          // Fetch related articles from the same category
+          // We fetch a larger batch and filter/sort in memory to be more robust
           const relatedQ = query(
             collection(db, 'articles'),
             where('category', '==', articleData.category),
-            where('status', '==', 'published'),
-            limit(12)
+            limit(20)
           );
+          
           const relatedSnap = await getDocs(relatedQ);
           const filteredRelated = relatedSnap.docs
             .map(d => {
               const data = d.data() as any;
-              return { id: d.id, ...data } as Article;
+              return { 
+                id: d.id, 
+                ...data,
+                authorId: data.authorId || data.authorid
+              } as Article;
             })
-            .filter(a => a.id !== articleData.id)
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            .filter(a => 
+              a.id !== articleData.id && 
+              (a.status === 'published' || !a.status)
+            )
+            .sort((a, b) => {
+              const dateA = new Date(a.publishedAt || a.createdAt || 0).getTime();
+              const dateB = new Date(b.publishedAt || b.createdAt || 0).getTime();
+              return dateB - dateA;
+            })
+            .slice(0, 4);
           
-          setRelated(filteredRelated.slice(0, 4));
+          setRelated(filteredRelated);
         }
       } catch (error) {
         console.error("Error fetching article:", error);
