@@ -9,6 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight, User as UserIcon } from 'lucide-react';
 import ArticleCard from '../components/ArticleCard';
 import Comments from '../components/Comments';
+import NewsletterBox from '../components/NewsletterBox';
 import { toast } from 'sonner';
 import SEO from '../components/SEO';
 
@@ -193,10 +194,8 @@ export default function ArticleDetail() {
               </div>
 
               {/* Newsletter Promo */}
-              <div className="mt-12 p-8 bg-blue-600 rounded-3xl text-white shadow-xl shadow-blue-500/20">
-                <h3 className="font-black text-xl mb-2">L'info en direct</h3>
-                <p className="text-blue-100 text-sm mb-6">Ne manquez aucune alerte info. Rejoignez notre communauté.</p>
-                <Link to="/" className="block w-full bg-white text-blue-600 text-center py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors">S'abonner</Link>
+              <div className="mt-12">
+                <NewsletterBox variant="vertical" />
               </div>
             </div>
           </div>

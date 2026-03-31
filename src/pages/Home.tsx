@@ -6,92 +6,14 @@ import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
 import { ChevronRight, TrendingUp, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
 import SEO from '../components/SEO';
+import NewsletterBox from '../components/NewsletterBox';
 
 export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [breakingNews, setBreakingNews] = useState<Article | null>(null);
   const [trending, setTrending] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState('');
-  const [honeypot, setHoneypot] = useState('');
-
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submitting) return;
-    
-    const emailToSubscribe = email.trim().toLowerCase();
-    
-    // Honeypot check: if this field is filled, it's likely a bot
-    if (honeypot) {
-      console.warn("Spam detected via honeypot.");
-      toast.success('Merci pour votre inscription !'); // Fake success for bots
-      setEmail('');
-      return;
-    }
-    
-    // Validation du format de l'email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailToSubscribe || !emailRegex.test(emailToSubscribe)) {
-      toast.error("Veuillez entrer une adresse email valide (ex: nom@domaine.com).");
-      return;
-    }
-    
-    setSubmitting(true);
-    try {
-      // 1. Vérifier si l'email existe déjà dans Firestore (en utilisant l'email comme ID)
-      const subscriberDocRef = doc(db, 'subscribers', emailToSubscribe);
-      
-      try {
-        const docSnap = await getDoc(subscriberDocRef);
-        if (docSnap.exists()) {
-          toast.info("Vous êtes déjà inscrit à notre newsletter avec cet email.");
-          setEmail('');
-          setSubmitting(false);
-          return;
-        }
-      } catch (checkError) {
-        // Si la vérification échoue (ex: permissions), on continue quand même pour tenter l'inscription
-        console.warn("Impossible de vérifier l'existence de l'abonné, tentative d'inscription directe.");
-      }
-
-      // 2. Enregistrer dans Firestore
-      await setDoc(subscriberDocRef, {
-        email: emailToSubscribe,
-        subscribedAt: new Date().toISOString(),
-        status: 'active'
-      });
-      
-      // 3. Appeler l'API Brevo via notre serveur (optionnel, on ne bloque pas si ça échoue)
-      try {
-        const response = await fetch('/api/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: emailToSubscribe })
-        });
-
-        if (response.ok) {
-          toast.success('Merci pour votre inscription ! Vous recevrez bientôt nos alertes.');
-        } else {
-          // Si Brevo échoue mais Firestore a réussi, on informe quand même d'un succès
-          toast.success('Merci pour votre inscription !');
-        }
-      } catch (apiError) {
-        console.warn("Erreur lors de l'appel à l'API Brevo, mais l'inscription Firestore a réussi.");
-        toast.success('Merci pour votre inscription !');
-      }
-      
-      setEmail('');
-    } catch (error: any) {
-      console.error("Erreur détaillée lors de l'inscription:", error);
-      toast.error(`Un problème est survenu lors de l'inscription. Veuillez réessayer.`);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -155,44 +77,7 @@ export default function Home() {
             </div>
 
             {/* Middle Banner */}
-            <div className="my-12 p-8 bg-blue-600 dark:bg-blue-700 rounded-3xl text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-blue-500/20 transition-colors duration-300">
-              <div className="max-w-md text-center md:text-left">
-                <h3 className="text-2xl font-black mb-2">Restez informé en continu</h3>
-                <p className="text-blue-100 dark:text-blue-200 text-sm">Abonnez-vous à notre newsletter pour recevoir les alertes info directement dans votre boîte mail.</p>
-              </div>
-              <form onSubmit={handleSubscribe} className="flex w-full md:w-auto gap-2">
-                {/* Honeypot field (hidden from users) */}
-                <div className="hidden" aria-hidden="true">
-                  <input 
-                    type="text" 
-                    name="full_name" 
-                    tabIndex={-1} 
-                    autoComplete="off"
-                    value={honeypot}
-                    onChange={(e) => setHoneypot(e.target.value)}
-                  />
-                </div>
-                <input 
-                  type="email" 
-                  placeholder="Votre email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="px-4 py-3 rounded-xl text-black dark:text-white bg-white dark:bg-gray-800 w-full md:w-64 focus:ring-2 focus:ring-blue-400 outline-none" 
-                  required
-                />
-                <button 
-                  type="submit" 
-                  disabled={submitting}
-                  className="bg-black dark:bg-gray-950 text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-900 dark:hover:bg-black transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
-                >
-                  {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    "S'abonner"
-                  )}
-                </button>
-              </form>
-            </div>
+            <NewsletterBox />
 
             {/* More News */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -222,7 +107,7 @@ export default function Home() {
               {/* Social Box */}
               <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800">
                 <h3 className="font-bold mb-4 dark:text-white">Suivez-nous sur Facebook</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 220 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 300 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
                 <a 
                   href="https://www.facebook.com/fcbkfmcomores" 
                   target="_blank" 
