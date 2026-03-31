@@ -51,12 +51,21 @@ export default function AdminUsers({ profile }: UsersPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6 lg:p-12 transition-colors duration-300">
-      <header className="flex items-center gap-4 mb-12">
-        <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-full transition-colors dark:text-white"><ArrowLeft size={20} /></button>
-        <div>
-          <h1 className="text-3xl font-black text-black dark:text-white">Gestion des Utilisateurs</h1>
-          <p className="text-gray-500 dark:text-gray-400">Gérez les accès et les rôles de votre équipe éditoriale.</p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-full transition-colors dark:text-white"><ArrowLeft size={20} /></button>
+          <div>
+            <h1 className="text-3xl font-black text-black dark:text-white">Gestion des Utilisateurs</h1>
+            <p className="text-gray-500 dark:text-gray-400">Gérez les accès et les rôles de votre équipe éditoriale.</p>
+          </div>
         </div>
+        <button 
+          onClick={() => toast.info("Pour ajouter un collaborateur, demandez-lui de se connecter une fois avec son compte Google. Il apparaîtra ensuite dans cette liste et vous pourrez changer son rôle.")}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-bold transition-all shadow-lg shadow-blue-600/20"
+        >
+          <UserPlus size={20} />
+          Ajouter un collaborateur
+        </button>
       </header>
 
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">

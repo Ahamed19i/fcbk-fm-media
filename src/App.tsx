@@ -43,8 +43,28 @@ export default function App() {
       if (firebaseUser) {
         const docRef = doc(db, 'users', firebaseUser.uid);
         const docSnap = await getDoc(docRef);
+        
         if (docSnap.exists()) {
           setProfile({ ...docSnap.data(), uid: firebaseUser.uid } as UserProfile);
+        } else {
+          // Create a default profile for new users
+          const newProfile: UserProfile = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            displayName: firebaseUser.displayName || 'Nouvel Utilisateur',
+            photoURL: firebaseUser.photoURL || '',
+            role: 'journalist', // Default role for new signups, admin can upgrade them later
+            createdAt: new Date().toISOString(),
+            bio: ''
+          };
+          
+          try {
+            await setDoc(docRef, newProfile);
+            setProfile(newProfile);
+          } catch (error) {
+            console.error("Error creating user profile:", error);
+            // If creation fails (e.g. due to rules), we still set the user but profile remains null
+          }
         }
       } else {
         setProfile(null);
