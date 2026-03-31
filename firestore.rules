@@ -1,5 +1,4 @@
 
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -110,7 +109,7 @@ service cloud.firestore {
 
     // Users
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isEditor());
+      allow read: if true; // Public profiles for authors
       
       allow create: if isAdmin() && isValidUser(request.resource.data);
       

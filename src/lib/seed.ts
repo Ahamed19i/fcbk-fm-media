@@ -1,3 +1,4 @@
+
 import { collection, getDocs, addDoc, query, limit } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -18,6 +19,21 @@ const SAMPLE_ARTICLES = [
     tags: ["élections", "politique", "Comores"]
   },
   {
+    title: "Réforme constitutionnelle : Ce qu'il faut savoir",
+    slug: "reforme-constitutionnelle-ce-qu-il-faut-savoir",
+    content: "Le débat sur la réforme constitutionnelle s'intensifie. Les experts juridiques analysent les changements proposés et leur impact sur la gouvernance du pays.",
+    excerpt: "Les points clés de la nouvelle proposition de loi qui divise la classe politique.",
+    mainImage: "https://picsum.photos/seed/politics2/1200/800",
+    category: "politique",
+    status: "published",
+    isBreaking: false,
+    views: 750,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
+    tags: ["réforme", "politique", "loi"]
+  },
+  {
     title: "FCBK FM : 300 000 abonnés, un record pour le média comorien",
     slug: "fcbk-fm-record-abonnes-media-comorien",
     content: "La plateforme d'information continue de croître et s'impose comme le leader incontesté de l'actualité en temps réel aux Comores et dans la diaspora.",
@@ -31,6 +47,21 @@ const SAMPLE_ARTICLES = [
     updatedAt: new Date().toISOString(),
     publishedAt: new Date().toISOString(),
     tags: ["média", "FCBK FM", "record"]
+  },
+  {
+    title: "Infrastructures : Nouveau terminal à l'aéroport de Moroni",
+    slug: "infrastructures-nouveau-terminal-aeroport-moroni",
+    content: "Les travaux du nouveau terminal avancent à grands pas. Cette infrastructure moderne permettra d'augmenter la capacité d'accueil des voyageurs internationaux.",
+    excerpt: "Un projet ambitieux pour moderniser les portes d'entrée de l'archipel.",
+    mainImage: "https://picsum.photos/seed/airport/1200/800",
+    category: "national",
+    status: "published",
+    isBreaking: false,
+    views: 1100,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
+    tags: ["transport", "infrastructure", "Moroni"]
   },
   {
     title: "Économie : Le prix de la vanille en hausse sur le marché mondial",
@@ -48,6 +79,21 @@ const SAMPLE_ARTICLES = [
     tags: ["économie", "vanille", "exportation"]
   },
   {
+    title: "Tourisme : Les Comores, une destination en plein essor",
+    slug: "tourisme-comores-destination-plein-essor",
+    content: "De plus en plus de voyageurs découvrent les beautés cachées de l'archipel. Le secteur touristique devient un pilier majeur du développement économique.",
+    excerpt: "Le nombre de visiteurs a augmenté de 15% par rapport à l'année dernière.",
+    mainImage: "https://picsum.photos/seed/tourism/1200/800",
+    category: "economie",
+    status: "published",
+    isBreaking: false,
+    views: 620,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
+    tags: ["tourisme", "économie", "développement"]
+  },
+  {
     title: "Sport : Les Cœlacanthes se préparent pour la prochaine CAN",
     slug: "sport-coelacanthes-preparation-can",
     content: "L'équipe nationale de football intensifie ses entraînements. Le sélectionneur se dit confiant quant aux chances de l'équipe de briller lors de la compétition.",
@@ -61,6 +107,21 @@ const SAMPLE_ARTICLES = [
     updatedAt: new Date().toISOString(),
     publishedAt: new Date().toISOString(),
     tags: ["sport", "football", "Cœlacanthes"]
+  },
+  {
+    title: "Basket-ball : Finale du championnat national ce weekend",
+    slug: "basket-ball-finale-championnat-national-weekend",
+    content: "L'ambiance promet d'être électrique pour la finale. Les deux meilleures équipes du pays s'affrontent pour le titre suprême.",
+    excerpt: "Qui remportera le trophée cette année ? Réponse dimanche soir.",
+    mainImage: "https://picsum.photos/seed/basket/1200/800",
+    category: "sport",
+    status: "published",
+    isBreaking: false,
+    views: 540,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
+    tags: ["sport", "basket", "finale"]
   }
 ];
 
