@@ -53,16 +53,21 @@ service cloud.firestore {
     // ===============================================================
     
     function isValidArticle(data) {
-      return hasOnlyAllowedFields(['title', 'content', 'category', 'authorId', 'status', 'mainImage', 'excerpt', 'slug', 'createdAt', 'updatedAt', 'tags', 'views']) &&
+      return hasOnlyAllowedFields(['title', 'content', 'category', 'authorId', 'status', 'mainImage', 'excerpt', 'slug', 'createdAt', 'updatedAt', 'tags', 'views', 'isBreaking', 'publishedAt']) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
              data.content is string && data.content.size() > 0 && data.content.size() <= 100000 &&
              data.category is string && data.category.size() <= 50 &&
-             data.authorId is string && data.authorId.size() == 28 &&
+             data.authorId is string && data.authorId.size() >= 20 && data.authorId.size() <= 128 &&
              data.status in ['draft', 'published', 'scheduled'] &&
+             data.createdAt is string &&
+             data.updatedAt is string &&
+             data.slug is string &&
+             data.views is number &&
              (!('mainImage' in data) || (data.mainImage is string && data.mainImage.size() <= 2048)) &&
              (!('excerpt' in data) || (data.excerpt is string && data.excerpt.size() <= 1000)) &&
-             (!('slug' in data) || (data.slug is string && data.slug.size() <= 255)) &&
-             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20));
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('isBreaking' in data) || data.isBreaking is bool) &&
+             (!('publishedAt' in data) || data.publishedAt == null || data.publishedAt is string);
     }
 
     function isValidUser(data) {
@@ -149,7 +154,7 @@ service cloud.firestore {
     // Subscribers
     match /subscribers/{subscriberId} {
       allow get: if true;
-      allow list: if isEditor();
+      allow list: if isJournalist();
       allow create: if isValidSubscriber(request.resource.data) && 
                     request.resource.data.email == subscriberId; // ID must be the email
       allow update, delete: if isEditor();

@@ -66,8 +66,9 @@ export default function ArticleEditor({ profile }: EditorProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
+      const { id: _id, ...cleanFormData } = formData;
       const data = {
-        ...formData,
+        ...cleanFormData,
         status,
         updatedAt: new Date().toISOString(),
         slug: formData.slug || formData.title?.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
