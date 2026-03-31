@@ -65,7 +65,7 @@ export default function Home() {
               <h2 className="text-2xl font-black tracking-tight flex items-center gap-2 dark:text-white">
                 <Zap className="text-yellow-500" fill="currentColor" /> Dernières Actualités
               </h2>
-              <Link to="/category/national" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+              <Link to="/category/all" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
                 Voir tout <ChevronRight size={16} />
               </Link>
             </div>
@@ -107,7 +107,7 @@ export default function Home() {
               {/* Social Box */}
               <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800">
                 <h3 className="font-bold mb-4 dark:text-white">Suivez-nous sur Facebook</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 300 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 224 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
                 <a 
                   href="https://www.facebook.com/fcbkfmcomores" 
                   target="_blank" 

@@ -17,15 +17,28 @@ export default function CategoryPage() {
     const fetchArticles = async () => {
       setLoading(true);
       try {
-        const q = query(
-          collection(db, 'articles'),
-          where('category', '==', slug),
-          where('status', '==', 'published'),
-          orderBy('createdAt', 'desc'),
-          limit(20)
-        );
+        let q;
+        if (slug === 'all') {
+          q = query(
+            collection(db, 'articles'),
+            where('status', '==', 'published'),
+            orderBy('createdAt', 'desc'),
+            limit(40)
+          );
+        } else {
+          q = query(
+            collection(db, 'articles'),
+            where('category', '==', slug),
+            where('status', '==', 'published'),
+            orderBy('createdAt', 'desc'),
+            limit(40)
+          );
+        }
         const querySnapshot = await getDocs(q);
-        setArticles(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article)));
+        setArticles(querySnapshot.docs.map(d => {
+          const data = d.data() as any;
+          return { id: d.id, ...data } as Article;
+        }));
       } catch (error) {
         console.error("Error fetching articles:", error);
       } finally {
@@ -44,21 +57,26 @@ export default function CategoryPage() {
     );
   }
 
+  const pageTitle = slug === 'all' ? 'Toutes les actualités' : slug?.toUpperCase();
+  const pageDescription = slug === 'all' 
+    ? "Retrouvez toute l'actualité des Comores sur FCBK FM."
+    : `Retrouvez toute l'actualité de la catégorie ${slug} sur FCBK FM.`;
+
   return (
     <div className="bg-white dark:bg-gray-950 min-h-screen transition-colors duration-300">
       <SEO 
-        title={slug?.toUpperCase()} 
-        description={`Retrouvez toute l'actualité de la catégorie ${slug} sur FCBK FM.`} 
+        title={pageTitle} 
+        description={pageDescription} 
       />
       <div className="bg-gray-50 dark:bg-gray-900 py-12 border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">
             <Link to="/" className="hover:underline">Accueil</Link>
             <ChevronRight size={12} />
-            <span className="text-gray-400 dark:text-gray-500">{slug}</span>
+            <span className="text-gray-400 dark:text-gray-500">{slug === 'all' ? 'Actualités' : slug}</span>
           </div>
           <h1 className="text-4xl font-black text-black dark:text-white uppercase tracking-tight">
-            {slug}
+            {pageTitle}
           </h1>
         </div>
       </div>

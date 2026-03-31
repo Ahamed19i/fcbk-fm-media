@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
@@ -48,20 +49,18 @@ export default function ArticleDetail() {
             collection(db, 'articles'),
             where('category', '==', articleData.category),
             where('status', '==', 'published'),
-            limit(10) // Fetch more to filter current and ensure enough
+            limit(12)
           );
           const relatedSnap = await getDocs(relatedQ);
           const filteredRelated = relatedSnap.docs
-            .map(d => ({ id: d.id, ...d.data() } as Article))
-            .filter(a => a.id !== articleData.id);
+            .map(d => {
+              const data = d.data() as any;
+              return { id: d.id, ...data } as Article;
+            })
+            .filter(a => a.id !== articleData.id)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           
-          // If only 1 article in category (the current one), filteredRelated will be empty
-          // If 2 or more, show up to 4
-          if (filteredRelated.length >= 1) {
-            setRelated(filteredRelated.slice(0, 4));
-          } else {
-            setRelated([]);
-          }
+          setRelated(filteredRelated.slice(0, 4));
         }
       } catch (error) {
         console.error("Error fetching article:", error);
@@ -176,26 +175,29 @@ export default function ArticleDetail() {
                 </div>
               </div>
             )}
+
+            {/* Related Articles Section - Below Content */}
+            {related.length > 0 && (
+              <div className="mt-16 pt-16 border-t border-gray-100 dark:border-gray-800">
+                <h2 className="text-2xl font-black tracking-tight mb-8 flex items-center gap-3 dark:text-white">
+                  <span className="w-12 h-1.5 bg-blue-600 block"></span> Sur le même sujet
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {related.map(item => (
+                    <ArticleCard key={item.id} article={item} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Sidebar: Related Articles */}
+          {/* Sidebar */}
           <div className="lg:col-span-4">
             <div className="sticky top-24">
-              {related.length > 0 && (
-                <>
-                  <h2 className="text-xl font-black tracking-tight mb-8 flex items-center gap-3 dark:text-white">
-                    <span className="w-8 h-1 bg-blue-600 block"></span> Sur le même sujet
-                  </h2>
-                  <div className="space-y-8 mb-12">
-                    {related.map(item => (
-                      <ArticleCard key={item.id} article={item} variant="horizontal" />
-                    ))}
-                  </div>
-                </>
-              )}
-
               {/* Newsletter Promo */}
               <NewsletterBox variant="vertical" />
+              
+              {/* Trending or other sidebar content can go here */}
             </div>
           </div>
         </div>
