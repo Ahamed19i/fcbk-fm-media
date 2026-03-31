@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment, orderBy } from 'firebase/firestore';
@@ -58,11 +59,11 @@ export default function ArticleDetail() {
             }
           }
 
-          // Fetch related articles
+          // Fetch related articles (Strictly same category)
           let categoryRelated: Article[] = [];
           
           try {
-            // 1. Fetch from the same category
+            // Fetch from the same category
             const relatedQ = query(
               collection(db, 'articles'),
               where('category', '==', articleData.category),
@@ -80,49 +81,13 @@ export default function ArticleDetail() {
                 } as Article;
               })
               .filter(a => a.id !== articleData.id && (a.status === 'published' || !a.status))
-              .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime());
+              .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime())
+              .slice(0, 4);
           } catch (e) {
             console.warn("Failed to fetch related by category:", e);
           }
-
-          // 2. If we have fewer than 4, fetch latest articles to FILL the gap
-          let finalRelated = [...categoryRelated];
           
-          if (finalRelated.length < 4) {
-            try {
-              const latestQ = query(
-                collection(db, 'articles'),
-                limit(15) // Fetch more to ensure we find enough unique ones
-              );
-              const latestSnap = await getDocs(latestQ);
-              const latestArticles = latestSnap.docs
-                .map(d => {
-                  const data = d.data();
-                  return { 
-                    id: d.id, 
-                    ...data,
-                    authorId: data.authorId || (data as any).authorid
-                  } as Article;
-                })
-                .filter(a => 
-                  a.id !== articleData.id && 
-                  !finalRelated.find(r => r.id === a.id) && // Don't duplicate
-                  (a.status === 'published' || !a.status)
-                )
-                .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime());
-              
-              // Append only what's needed to reach 4
-              const needed = 4 - finalRelated.length;
-              finalRelated = [...finalRelated, ...latestArticles.slice(0, needed)];
-            } catch (e) {
-              console.warn("Failed to fetch latest articles:", e);
-            }
-          } else {
-            // If we have 4 or more from the same category, just take the top 4
-            finalRelated = finalRelated.slice(0, 4);
-          }
-          
-          setRelated(finalRelated);
+          setRelated(categoryRelated);
         }
       } catch (error) {
         console.error("Error fetching article:", error);
