@@ -55,7 +55,8 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['email', 'displayName', 'role', 'createdAt', 'photoURL', 'bio']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role', 'createdAt', 'photoURL', 'bio']) &&
+             data.uid is string && data.uid.size() >= 20 && data.uid.size() <= 128 &&
              data.email is string && data.email.size() <= 255 &&
              data.role in ['admin', 'editor', 'journalist'] &&
              (!('bio' in data) || (data.bio is string && data.bio.size() <= 500));
@@ -129,9 +130,9 @@ service cloud.firestore {
 
     // Whitelist for authorized members
     match /whitelist/{email} {
-      allow read: if isAdmin() || (isAuthenticated() && request.auth.token.email.lower() == email);
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.token.email.lower() == email.lower());
       allow create, update: if isAdmin();
-      allow delete: if isAdmin() || (isAuthenticated() && request.auth.token.email.lower() == email);
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.token.email.lower() == email.lower());
     }
 
     // Subscribers
