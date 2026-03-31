@@ -18,11 +18,6 @@ export default function AdminDashboard({ profile }: DashboardProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!profile) {
-      navigate('/admin/login');
-      return;
-    }
-
     const fetchArticles = async () => {
       try {
         const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
@@ -36,7 +31,7 @@ export default function AdminDashboard({ profile }: DashboardProps) {
     };
 
     fetchArticles();
-  }, [profile, navigate]);
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?")) {

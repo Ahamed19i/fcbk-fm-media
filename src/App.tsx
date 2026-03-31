@@ -20,6 +20,7 @@ import AdminSettings from './pages/Admin/Settings';
 import AdminSubscribers from './pages/Admin/Subscribers';
 import ArticleEditor from './pages/Admin/ArticleEditor';
 import SearchPage from './components/SearchPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Static Pages
 import StaticPage from './pages/StaticPage';
@@ -35,12 +36,14 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
     seedData();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
+        setProfileLoading(true);
         const docRef = doc(db, 'users', firebaseUser.uid);
         const docSnap = await getDoc(docRef);
         
@@ -76,8 +79,10 @@ export default function App() {
               if (whitelistSnap.exists()) {
                 await deleteDoc(whitelistRef);
               }
+              toast.success("Profil créé avec succès ! Bienvenue.");
             } catch (error) {
               console.error("Error creating user profile:", error);
+              toast.error("Erreur lors de la création du profil. Veuillez contacter un administrateur.");
             }
           } else {
             // User not authorized
@@ -87,6 +92,7 @@ export default function App() {
             setProfile(null);
           }
         }
+        setProfileLoading(false);
       } else {
         setProfile(null);
       }
@@ -120,13 +126,37 @@ export default function App() {
                 <Route path="/article/:slug" element={<ArticleDetail />} />
                 <Route path="/category/:slug" element={<CategoryPage />} />
                 <Route path="/search" element={<SearchPage />} />
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route path="/admin" element={<AdminDashboard profile={profile} />} />
-                <Route path="/admin/users" element={<AdminUsers profile={profile} />} />
-                <Route path="/admin/settings" element={<AdminSettings profile={profile} />} />
-                <Route path="/admin/subscribers" element={<AdminSubscribers profile={profile} />} />
-                <Route path="/admin/editor" element={<ArticleEditor profile={profile} />} />
-                <Route path="/admin/editor/:id" element={<ArticleEditor profile={profile} />} />
+                <Route path="/admin/login" element={<AdminLogin profile={profile} loading={profileLoading} />} />
+                <Route path="/admin" element={
+                  <ProtectedRoute profile={profile} loading={loading || profileLoading}>
+                    <AdminDashboard profile={profile} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/users" element={
+                  <ProtectedRoute profile={profile} loading={loading || profileLoading} requiredRole="admin">
+                    <AdminUsers profile={profile} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/settings" element={
+                  <ProtectedRoute profile={profile} loading={loading || profileLoading} requiredRole="admin">
+                    <AdminSettings profile={profile} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/subscribers" element={
+                  <ProtectedRoute profile={profile} loading={loading || profileLoading}>
+                    <AdminSubscribers profile={profile} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/editor" element={
+                  <ProtectedRoute profile={profile} loading={loading || profileLoading}>
+                    <ArticleEditor profile={profile} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/editor/:id" element={
+                  <ProtectedRoute profile={profile} loading={loading || profileLoading}>
+                    <ArticleEditor profile={profile} />
+                  </ProtectedRoute>
+                } />
                 
                 {/* Static Routes */}
                 <Route path="/about" element={<StaticPage title="À propos" content={

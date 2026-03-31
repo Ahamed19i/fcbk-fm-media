@@ -53,13 +53,8 @@ export default function AdminUsers({ profile }: UsersPageProps) {
   };
 
   useEffect(() => {
-    if (!profile || profile.role !== 'admin') {
-      navigate('/admin');
-      return;
-    }
-
     fetchUsers();
-  }, [profile, navigate]);
+  }, []);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -16,11 +16,6 @@ export default function AdminSettings({ profile }: SettingsPageProps) {
     toast.success(`${action} effectué avec succès.`);
   };
 
-  if (!profile || profile.role !== 'admin') {
-    navigate('/admin');
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6 lg:p-12 transition-colors duration-300">
       <header className="flex items-center gap-4 mb-12">

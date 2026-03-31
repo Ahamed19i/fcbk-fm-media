@@ -24,11 +24,6 @@ export default function AdminSubscribers({ profile }: SubscribersPageProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!profile || profile.role !== 'admin') {
-      navigate('/admin');
-      return;
-    }
-
     const q = query(collection(db, 'subscribers'), orderBy('subscribedAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedSubscribers = snapshot.docs.map(doc => ({
@@ -44,7 +39,7 @@ export default function AdminSubscribers({ profile }: SubscribersPageProps) {
     });
 
     return () => unsubscribe();
-  }, [profile, navigate]);
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Voulez-vous vraiment supprimer cet abonné ?")) return;

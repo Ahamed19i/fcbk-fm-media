@@ -1,14 +1,28 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { auth } from '../../lib/firebase';
 import { toast } from 'sonner';
+import { UserProfile } from '../../types';
 
-export default function AdminLogin() {
+interface LoginProps {
+  profile: UserProfile | null;
+  loading: boolean;
+}
+
+export default function AdminLogin({ profile, loading: profileLoading }: LoginProps) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect if already logged in and profile is ready
+  useEffect(() => {
+    if (profile && !profileLoading) {
+      const from = (location.state as any)?.from?.pathname || '/admin';
+      navigate(from, { replace: true });
+    }
+  }, [profile, profileLoading, navigate, location]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -16,7 +30,7 @@ export default function AdminLogin() {
     try {
       await signInWithPopup(auth, provider);
       toast.success("Connexion réussie !");
-      navigate('/admin');
+      // App.tsx will handle the profile check and ProtectedRoute will handle the final redirection
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Erreur lors de la connexion.");
