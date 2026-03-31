@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -133,12 +134,12 @@ export default function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/users" element={
-                  <ProtectedRoute profile={profile} loading={loading || profileLoading} requiredRole="admin">
+                  <ProtectedRoute profile={profile} loading={loading || profileLoading} requiredRole="editor">
                     <AdminUsers profile={profile} />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/settings" element={
-                  <ProtectedRoute profile={profile} loading={loading || profileLoading} requiredRole="admin">
+                  <ProtectedRoute profile={profile} loading={loading || profileLoading} requiredRole="editor">
                     <AdminSettings profile={profile} />
                   </ProtectedRoute>
                 } />

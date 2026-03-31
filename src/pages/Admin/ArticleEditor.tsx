@@ -36,12 +36,21 @@ export default function ArticleEditor({ profile }: EditorProps) {
       const fetchArticle = async () => {
         const docSnap = await getDoc(doc(db, 'articles', id));
         if (docSnap.exists()) {
-          setFormData(docSnap.data() as Article);
+          const articleData = docSnap.data() as Article;
+          
+          // Check permissions for Journalist: can only edit their own articles
+          if (profile?.role === 'journalist' && articleData.authorId !== profile.uid) {
+            toast.error("Vous n'avez pas la permission de modifier cet article.");
+            navigate('/admin');
+            return;
+          }
+          
+          setFormData(articleData);
         }
       };
       fetchArticle();
     }
-  }, [id]);
+  }, [id, profile, navigate]);
 
   const handleSave = async (status: 'draft' | 'published' = 'draft') => {
     if (!formData.title || !formData.content) {
@@ -62,8 +71,8 @@ export default function ArticleEditor({ profile }: EditorProps) {
         status,
         updatedAt: new Date().toISOString(),
         slug: formData.slug || formData.title?.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
-        authorId: profile?.uid || auth.currentUser?.uid || '',
-        publishedAt: status === 'published' ? new Date().toISOString() : null,
+        authorId: formData.authorId || profile?.uid || auth.currentUser?.uid || '',
+        publishedAt: status === 'published' ? new Date().toISOString() : (formData.publishedAt || null),
         views: formData.views || 0,
         createdAt: formData.createdAt || new Date().toISOString()
       };

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
@@ -84,12 +85,14 @@ export default function AdminSubscribers({ profile }: SubscribersPageProps) {
             <p className="text-gray-500 dark:text-gray-400">Gérez les inscriptions à votre newsletter.</p>
           </div>
         </div>
-        <button 
-          onClick={exportCSV}
-          className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
-        >
-          <Download size={20} /> Exporter CSV
-        </button>
+        {profile?.role !== 'journalist' && (
+          <button 
+            onClick={exportCSV}
+            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+          >
+            <Download size={20} /> Exporter CSV
+          </button>
+        )}
       </header>
 
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -123,12 +126,14 @@ export default function AdminSubscribers({ profile }: SubscribersPageProps) {
                     </span>
                   </td>
                   <td className="px-8 py-4 text-right">
-                    <button 
-                      onClick={() => handleDelete(subscriber.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {profile?.role !== 'journalist' && (
+                      <button 
+                        onClick={() => handleDelete(subscriber.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

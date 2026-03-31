@@ -10,19 +10,30 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Use Custom Claims for roles (request.auth.token.role)
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getRole() {
+      return userExists() ? getUserData().role : 'guest';
+    }
+
     function isAdmin() {
       return isAuthenticated() && 
-             (request.auth.token.role == 'admin' || 
+             (getRole() == 'admin' || 
               (request.auth.token.email == "ahassanimhoma20@gmail.com" && request.auth.token.email_verified == true));
     }
     
     function isEditor() {
-      return isAuthenticated() && (isAdmin() || request.auth.token.role == 'editor');
+      return isAuthenticated() && (isAdmin() || getRole() == 'editor');
     }
     
     function isJournalist() {
-      return isAuthenticated() && (isEditor() || request.auth.token.role == 'journalist');
+      return isAuthenticated() && (isEditor() || getRole() == 'journalist');
     }
 
     function isOwner(userId) {
@@ -130,7 +141,7 @@ service cloud.firestore {
 
     // Whitelist for authorized members
     match /whitelist/{email} {
-      allow read: if isAdmin() || (isAuthenticated() && request.auth.token.email.lower() == email.lower());
+      allow read: if isEditor() || (isAuthenticated() && request.auth.token.email.lower() == email.lower());
       allow create, update: if isAdmin();
       allow delete: if isAdmin() || (isAuthenticated() && request.auth.token.email.lower() == email.lower());
     }

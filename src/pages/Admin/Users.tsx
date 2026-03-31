@@ -135,13 +135,15 @@ export default function AdminUsers({ profile }: UsersPageProps) {
             <p className="text-gray-500 dark:text-gray-400">Gérez les accès et les rôles de votre équipe éditoriale.</p>
           </div>
         </div>
-        <button 
-          onClick={() => setShowInviteModal(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-bold transition-all shadow-lg shadow-blue-600/20"
-        >
-          <UserPlus size={20} />
-          Ajouter un collaborateur
-        </button>
+        {profile?.role === 'admin' && (
+          <button 
+            onClick={() => setShowInviteModal(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-bold transition-all shadow-lg shadow-blue-600/20"
+          >
+            <UserPlus size={20} />
+            Ajouter un collaborateur
+          </button>
+        )}
       </header>
 
       {/* Invite Modal */}
@@ -215,8 +217,9 @@ export default function AdminUsers({ profile }: UsersPageProps) {
                   <td className="px-8 py-6">
                     <select
                       value={user.role}
+                      disabled={profile?.role !== 'admin'}
                       onChange={(e) => handleRoleChange(user.uid, e.target.value as any, user.email)}
-                      className="text-xs font-bold uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-none rounded-md px-2 py-1 focus:ring-2 focus:ring-blue-400 outline-none dark:text-white"
+                      className="text-xs font-bold uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-none rounded-md px-2 py-1 focus:ring-2 focus:ring-blue-400 outline-none dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="admin">Admin</option>
                       <option value="editor">Éditeur</option>
@@ -228,13 +231,15 @@ export default function AdminUsers({ profile }: UsersPageProps) {
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => handleDeleteUser(user.uid, user.email)}
-                        className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        title="Supprimer l'accès"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {profile?.role === 'admin' && (
+                        <button 
+                          onClick={() => handleDeleteUser(user.uid, user.email)}
+                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                          title="Supprimer l'accès"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                       <button className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                         <Shield size={18} />
                       </button>

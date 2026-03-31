@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, deleteDoc, doc, where } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
@@ -33,11 +34,17 @@ export default function AdminDashboard({ profile }: DashboardProps) {
     fetchArticles();
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (article: Article) => {
+    // Check permissions
+    if (profile?.role === 'journalist' && article.authorId !== profile.uid) {
+      toast.error("Vous n'avez pas la permission de supprimer cet article.");
+      return;
+    }
+
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?")) {
       try {
-        await deleteDoc(doc(db, 'articles', id));
-        setArticles(articles.filter(a => a.id !== id));
+        await deleteDoc(doc(db, 'articles', article.id));
+        setArticles(articles.filter(a => a.id !== article.id));
         toast.success("Article supprimé !");
       } catch (error) {
         toast.error("Erreur lors de la suppression.");
@@ -58,8 +65,12 @@ export default function AdminDashboard({ profile }: DashboardProps) {
           <Link to="/admin" className="flex items-center gap-3 p-3 bg-blue-600 rounded-xl font-bold"><LayoutDashboard size={20} /> Dashboard</Link>
           <Link to="/admin/editor" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Plus size={20} /> Nouvel Article</Link>
           <Link to="/admin/subscribers" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Mail size={20} /> Abonnés</Link>
-          <Link to="/admin/users" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Users size={20} /> Utilisateurs</Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Settings size={20} /> Paramètres</Link>
+          {profile?.role !== 'journalist' && (
+            <>
+              <Link to="/admin/users" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Users size={20} /> Utilisateurs</Link>
+              <Link to="/admin/settings" className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-xl font-bold"><Settings size={20} /> Paramètres</Link>
+            </>
+          )}
         </nav>
         <button onClick={() => auth.signOut()} className="flex items-center gap-3 p-3 text-red-400 hover:bg-red-900/20 rounded-xl font-bold"><LogOut size={20} /> Déconnexion</button>
       </aside>
@@ -149,8 +160,13 @@ export default function AdminDashboard({ profile }: DashboardProps) {
                     <td className="px-8 py-6 text-sm text-gray-500 dark:text-gray-400">{formatDate(article.createdAt)}</td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex justify-end gap-2">
-                        <Link to={`/admin/editor/${article.id}`} className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><Edit size={18} /></Link>
-                        <button onClick={() => handleDelete(article.id)} className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"><Trash2 size={18} /></button>
+                        {(profile?.role !== 'journalist' || article.authorId === profile?.uid) && (
+                          <>
+                            <Link to={`/admin/editor/${article.id}`} className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><Edit size={18} /></Link>
+                            <button onClick={() => handleDelete(article)} className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"><Trash2 size={18} /></button>
+                          </>
+                        )}
+                        <Link to={`/article/${article.slug}`} target="_blank" className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"><Eye size={18} /></Link>
                       </div>
                     </td>
                   </tr>
