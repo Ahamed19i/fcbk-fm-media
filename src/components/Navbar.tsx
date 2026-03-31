@@ -1,30 +1,29 @@
 
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { User } from 'firebase/auth';
 import { UserProfile } from '../types';
-import { auth, db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { toast } from 'sonner';
+import { auth } from '../lib/firebase';
 import { Menu, X, Search as SearchIcon, User as UserIcon, LogOut, LayoutDashboard, Sun, Moon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTheme } from '../context/ThemeContext';
 
-const CATEGORIES = [
+interface NavbarProps {
+  user: User | null;
+  profile: UserProfile | null;
+}
+
+const categories = [
   { name: 'National', slug: 'national' },
+  { name: 'International', slug: 'international' },
   { name: 'Politique', slug: 'politique' },
   { name: 'Économie', slug: 'economie' },
   { name: 'Sport', slug: 'sport' },
   { name: 'Culture', slug: 'culture' },
   { name: 'Diaspora', slug: 'diaspora' },
   { name: 'Société', slug: 'societe' },
-  { name: 'International', slug: 'international' },
 ];
-
-interface NavbarProps {
-  user: User | null;
-  profile: UserProfile | null;
-}
 
 export default function Navbar({ user, profile }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,32 +32,9 @@ export default function Navbar({ user, profile }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  const currentDate = new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-
-  const handleGoogleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      toast.success("Connecté avec succès !");
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Erreur lors de la connexion.");
-    }
-  };
-
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      toast.success("Déconnecté.");
-      navigate('/');
-    } catch (error) {
-      toast.error("Erreur lors de la déconnexion.");
-    }
+    await auth.signOut();
+    navigate('/');
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -70,84 +46,77 @@ export default function Navbar({ user, profile }: NavbarProps) {
     }
   };
 
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'editor' || profile?.role === 'journalist';
-
   return (
-    <nav className="bg-white dark:bg-gray-950 transition-colors duration-300 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50 transition-colors duration-300">
       {/* Top Bar */}
-      <div className="bg-black text-white py-2 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex justify-between items-center text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-          <div className="flex items-center gap-4">
-            <span className="hidden sm:inline">{currentDate}</span>
-            <span className="text-gray-400 hidden md:inline">FCBK FM - Le Média de Référence des Comores</span>
-          </div>
-          <div className="flex items-center gap-4 sm:gap-6">
-            <button
-              onClick={toggleTheme}
-              className="p-1 rounded-full hover:bg-gray-800 transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-            
-            {user ? (
-              <div className="flex items-center gap-4">
-                <span className="hidden sm:inline text-gray-300">{user.displayName}</span>
-                {isAdmin && (
-                  <Link to="/admin" className="flex items-center gap-1.5 hover:text-blue-400 transition-colors">
-                    <LayoutDashboard size={14} /> Admin
-                  </Link>
-                )}
-                <button onClick={handleLogout} className="hover:text-red-400 transition-colors">
-                  Déconnexion
-                </button>
-              </div>
-            ) : (
-              <button onClick={handleGoogleSignIn} className="hover:text-blue-400 transition-colors">
-                Connexion
+      <div className="bg-gray-100 dark:bg-black text-gray-600 dark:text-white py-2 px-4 text-xs font-medium flex justify-between items-center transition-colors duration-300">
+        <div className="flex space-x-4">
+          <span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <span className="hidden sm:inline">FCBK FM - Le Média de Référence des Comores</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={toggleTheme}
+            className="p-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            title={theme === 'light' ? 'Passer au mode sombre' : 'Passer au mode clair'}
+          >
+            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+          </button>
+          {user ? (
+            <div className="flex items-center space-x-3">
+              <span className="opacity-70">{profile?.displayName || user.email}</span>
+              {profile?.role && (
+                <Link to="/admin" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
+                  <LayoutDashboard size={14} /> Admin
+                </Link>
+              )}
+              <button onClick={handleLogout} className="hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1">
+                <LogOut size={14} /> Quitter
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <Link to="/admin/login" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
+              <UserIcon size={14} /> Connexion
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* Main Bar */}
+      {/* Main Nav */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between h-20">
           <div className="flex items-center">
-            <Link to="/" className="text-3xl font-black tracking-tighter text-black dark:text-white">
-              FCBK<span className="text-blue-600">FM</span>
+            <Link to="/" className="flex-shrink-0 flex items-center">
+              <span className="text-3xl font-black tracking-tighter text-black dark:text-white">
+                FCBK<span className="text-blue-600">FM</span>
+              </span>
             </Link>
           </div>
 
-          <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
-            {CATEGORIES.map((cat) => (
+          {/* Desktop Menu */}
+          <div className="hidden lg:flex lg:items-center lg:space-x-6">
+            {categories.map((cat) => (
               <Link
                 key={cat.slug}
                 to={`/category/${cat.slug}`}
-                className="text-xs xl:text-sm font-black text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors uppercase tracking-widest"
+                className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 {cat.name}
               </Link>
             ))}
             <button
-              onClick={() => setIsSearchOpen(true)}
-              className="p-2 text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               <SearchIcon size={20} />
             </button>
           </div>
 
-          <div className="lg:hidden flex items-center gap-4">
-            <button
-              onClick={() => setIsSearchOpen(true)}
-              className="p-2 text-gray-900 dark:text-gray-100"
-            >
-              <SearchIcon size={20} />
-            </button>
+          {/* Mobile menu button */}
+          <div className="flex items-center lg:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 text-gray-900 dark:text-gray-100"
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none"
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -156,39 +125,45 @@ export default function Navbar({ user, profile }: NavbarProps) {
       </div>
 
       {/* Mobile Menu */}
-      {isOpen && (
-        <div className="lg:hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 py-6 px-4 space-y-6">
-          {CATEGORIES.map((cat) => (
+      <div className={cn("lg:hidden", isOpen ? "block" : "hidden")}>
+        <div className="px-4 pt-2 pb-3 space-y-1 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800">
+          <form onSubmit={handleSearch} className="relative mb-4">
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 rounded-xl text-sm border-none focus:ring-2 focus:ring-blue-400 outline-none dark:text-white"
+            />
+            <SearchIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          </form>
+          {categories.map((cat) => (
             <Link
               key={cat.slug}
               to={`/category/${cat.slug}`}
               onClick={() => setIsOpen(false)}
-              className="block text-sm font-black text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 uppercase tracking-widest"
+              className="block px-3 py-2 rounded-md text-base font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-900"
             >
               {cat.name}
             </Link>
           ))}
         </div>
-      )}
+      </div>
 
       {/* Search Overlay */}
       {isSearchOpen && (
-        <div className="absolute inset-0 bg-white dark:bg-gray-950 z-50 flex items-center px-4 sm:px-6 lg:px-8">
-          <form onSubmit={handleSearch} className="w-full max-w-3xl mx-auto flex items-center gap-4">
-            <SearchIcon className="text-gray-400" size={24} />
+        <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 p-4 shadow-lg animate-in slide-in-from-top duration-200">
+          <form onSubmit={handleSearch} className="max-w-3xl mx-auto flex items-center">
             <input
-              autoFocus
               type="text"
-              placeholder="Rechercher un article..."
-              className="flex-grow bg-transparent border-none outline-none text-xl font-bold dark:text-white"
+              placeholder="Rechercher une actualité..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-3 text-lg border-none focus:ring-0 outline-none bg-transparent dark:text-white"
+              autoFocus
             />
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen(false)}
-              className="p-2 text-gray-400 hover:text-black dark:hover:text-white"
-            >
+            <button type="submit" className="hidden">Rechercher</button>
+            <button type="button" onClick={() => setIsSearchOpen(false)} className="p-2 text-gray-400 hover:text-black dark:hover:text-white">
               <X size={24} />
             </button>
           </form>
