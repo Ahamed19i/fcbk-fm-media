@@ -181,28 +181,6 @@ export default function ArticleDetail() {
               <ReactMarkdown>{article.content}</ReactMarkdown>
             </div>
 
-            {/* Author Bio */}
-            {author && (
-              <div className="mb-16">
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 flex flex-col sm:flex-row items-center gap-8 border border-gray-100 dark:border-gray-800">
-                  {author.photoURL ? (
-                    <img src={author.photoURL} alt={author.displayName} className="w-24 h-24 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-                      <UserIcon size={40} className="text-gray-400" />
-                    </div>
-                  )}
-                  <div className="text-center sm:text-left">
-                    <h3 className="text-lg font-bold mb-2 dark:text-white">À propos de {author.displayName}</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">{author.bio || "Journaliste passionné couvrant l'actualité pour FCBK FM."}</p>
-                    <div className="flex items-center gap-4 justify-center sm:justify-start">
-                      <span className="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">{author.role}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Related Articles Section - Below Content */}
             {related.length > 0 && (
               <div className="mt-16 pt-16 border-t border-gray-100 dark:border-gray-800">
@@ -221,10 +199,37 @@ export default function ArticleDetail() {
           {/* Sidebar */}
           <div className="lg:col-span-4">
             <div className="sticky top-24">
+              {/* Author Sidebar Card */}
+              {author && (
+                <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 mb-8 shadow-sm transition-all hover:shadow-md">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="relative mb-6">
+                      {author.photoURL ? (
+                        <img src={author.photoURL} alt={author.displayName} className="w-24 h-24 rounded-full object-cover border-4 border-blue-50 dark:border-blue-900/30 p-1" />
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center border-2 border-gray-200 dark:border-gray-700">
+                          <UserIcon size={40} className="text-gray-400" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-1 right-1 bg-blue-600 text-white p-1.5 rounded-full border-4 border-white dark:border-gray-900">
+                        <Zap size={14} fill="currentColor" />
+                      </div>
+                    </div>
+                    <span className="inline-block px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
+                      {author.role}
+                    </span>
+                    <h3 className="text-xl font-black text-black dark:text-white mb-3 tracking-tight">
+                      {author.displayName}
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed italic">
+                      "{author.bio || "Journaliste passionné couvrant l'actualité pour FCBK FM."}"
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Newsletter Promo */}
               <NewsletterBox variant="vertical" />
-              
-              {/* Trending or other sidebar content can go here */}
             </div>
           </div>
         </div>
