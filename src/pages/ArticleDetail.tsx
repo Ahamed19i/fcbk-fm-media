@@ -59,10 +59,10 @@ export default function ArticleDetail() {
           }
 
           // Fetch related articles
-          let finalRelated: Article[] = [];
+          let categoryRelated: Article[] = [];
           
           try {
-            // 1. Try to fetch from the same category first
+            // 1. Fetch from the same category
             const relatedQ = query(
               collection(db, 'articles'),
               where('category', '==', articleData.category),
@@ -70,7 +70,7 @@ export default function ArticleDetail() {
             );
             
             const relatedSnap = await getDocs(relatedQ);
-            finalRelated = relatedSnap.docs
+            categoryRelated = relatedSnap.docs
               .map(d => {
                 const data = d.data();
                 return { 
@@ -79,17 +79,20 @@ export default function ArticleDetail() {
                   authorId: data.authorId || (data as any).authorid
                 } as Article;
               })
-              .filter(a => a.id !== articleData.id && (a.status === 'published' || !a.status));
+              .filter(a => a.id !== articleData.id && (a.status === 'published' || !a.status))
+              .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime());
           } catch (e) {
             console.warn("Failed to fetch related by category:", e);
           }
 
-          // 2. If we don't have 4 articles, fetch latest articles from any category to fill the gap
+          // 2. If we have fewer than 4, fetch latest articles to FILL the gap
+          let finalRelated = [...categoryRelated];
+          
           if (finalRelated.length < 4) {
             try {
               const latestQ = query(
                 collection(db, 'articles'),
-                limit(10)
+                limit(15) // Fetch more to ensure we find enough unique ones
               );
               const latestSnap = await getDocs(latestQ);
               const latestArticles = latestSnap.docs
@@ -103,20 +106,21 @@ export default function ArticleDetail() {
                 })
                 .filter(a => 
                   a.id !== articleData.id && 
-                  !finalRelated.find(r => r.id === a.id) &&
+                  !finalRelated.find(r => r.id === a.id) && // Don't duplicate
                   (a.status === 'published' || !a.status)
-                );
+                )
+                .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime());
               
-              finalRelated = [...finalRelated, ...latestArticles];
+              // Append only what's needed to reach 4
+              const needed = 4 - finalRelated.length;
+              finalRelated = [...finalRelated, ...latestArticles.slice(0, needed)];
             } catch (e) {
               console.warn("Failed to fetch latest articles:", e);
             }
+          } else {
+            // If we have 4 or more from the same category, just take the top 4
+            finalRelated = finalRelated.slice(0, 4);
           }
-          
-          // Sort by date and slice to 4
-          finalRelated = finalRelated
-            .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime())
-            .slice(0, 4);
           
           setRelated(finalRelated);
         }
