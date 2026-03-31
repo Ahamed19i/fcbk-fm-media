@@ -14,37 +14,9 @@ export default function AdminLogin() {
     setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Check if user exists in our users collection
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (!userDoc.exists()) {
-        // If it's the first admin (the one provided in context)
-        if (user.email === "ahassanimhoma20@gmail.com") {
-          await setDoc(doc(db, 'users', user.uid), {
-            email: user.email,
-            displayName: user.displayName,
-            role: 'admin',
-            createdAt: new Date().toISOString()
-          });
-          
-          // Note: Custom claims will need to be set via the backend
-          // For the very first login, the user might need to refresh to get the claim
-          // or we can trigger a role assignment API call here.
-          
-          toast.success("Bienvenue, Administrateur ! (Initialisation...)");
-          navigate('/admin');
-        } else {
-          // For other users, they need to be added by an admin first
-          await auth.signOut();
-          toast.error("Accès refusé. Votre compte n'est pas encore activé par un administrateur.");
-        }
-      } else {
-        toast.success("Connexion réussie !");
-        navigate('/admin');
-      }
+      await signInWithPopup(auth, provider);
+      toast.success("Connexion réussie !");
+      navigate('/admin');
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Erreur lors de la connexion.");

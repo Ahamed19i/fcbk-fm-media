@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { UserProfile } from './types';
-import { Toaster } from 'sonner';
+import { toast, Toaster } from 'sonner';
 import { seedData } from './lib/seed';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -47,23 +47,44 @@ export default function App() {
         if (docSnap.exists()) {
           setProfile({ ...docSnap.data(), uid: firebaseUser.uid } as UserProfile);
         } else {
-          // Create a default profile for new users
-          const newProfile: UserProfile = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            displayName: firebaseUser.displayName || 'Nouvel Utilisateur',
-            photoURL: firebaseUser.photoURL || '',
-            role: 'journalist', // Default role for new signups, admin can upgrade them later
-            createdAt: new Date().toISOString(),
-            bio: ''
-          };
+          // Check if user is in whitelist
+          const email = firebaseUser.email?.toLowerCase() || '';
+          const whitelistRef = doc(db, 'whitelist', email);
+          const whitelistSnap = await getDoc(whitelistRef);
           
-          try {
-            await setDoc(docRef, newProfile);
-            setProfile(newProfile);
-          } catch (error) {
-            console.error("Error creating user profile:", error);
-            // If creation fails (e.g. due to rules), we still set the user but profile remains null
+          const isAdminEmail = email === "ahassanimhoma20@gmail.com";
+          
+          if (whitelistSnap.exists() || isAdminEmail) {
+            const whitelistData = whitelistSnap.exists() ? whitelistSnap.data() : null;
+            
+            // Create a default profile for new authorized users
+            const newProfile: UserProfile = {
+              uid: firebaseUser.uid,
+              email: email,
+              displayName: firebaseUser.displayName || 'Nouvel Utilisateur',
+              photoURL: firebaseUser.photoURL || '',
+              role: isAdminEmail ? 'admin' : (whitelistData?.role || 'journalist'),
+              createdAt: new Date().toISOString(),
+              bio: ''
+            };
+            
+            try {
+              await setDoc(docRef, newProfile);
+              setProfile(newProfile);
+              
+              // Remove from whitelist after successful profile creation
+              if (whitelistSnap.exists()) {
+                await deleteDoc(whitelistRef);
+              }
+            } catch (error) {
+              console.error("Error creating user profile:", error);
+            }
+          } else {
+            // User not authorized
+            console.error("User not in whitelist");
+            toast.error("Accès refusé. Votre email n'est pas autorisé.");
+            await auth.signOut();
+            setProfile(null);
           }
         }
       } else {

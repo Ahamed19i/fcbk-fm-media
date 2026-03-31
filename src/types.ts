@@ -37,6 +37,9 @@ export interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
+  photoURL?: string;
+  bio?: string;
   role: 'admin' | 'editor' | 'journalist';
   createdAt: string;
+  isInvited?: boolean;
 }

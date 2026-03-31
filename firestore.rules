@@ -109,16 +109,29 @@ service cloud.firestore {
 
     // Users
     match /users/{userId} {
-      allow read: if true; // Public profiles for authors
+      allow read: if true; 
       
-      allow create: if (isAdmin() || (request.auth.uid == userId && request.resource.data.role == 'journalist')) && 
+      // Allow creation if:
+      // 1. The requester is an admin (to pre-authorize someone)
+      // 2. It's the primary admin creating their own first profile
+      // 3. The user's email is in the whitelist (self-registration for authorized members)
+      allow create: if (isAdmin() || 
+                        (request.auth.uid == userId && request.auth.token.email == "ahassanimhoma20@gmail.com") ||
+                        (request.auth.uid == userId && exists(/databases/$(database)/documents/whitelist/$(request.auth.token.email.lower())))) && 
                     isValidUser(request.resource.data);
       
       allow update: if (isAdmin() || (request.auth.uid == userId)) && 
                     isValidUser(request.resource.data) &&
-                    (isAdmin() || request.resource.data.role == resource.data.role); // Non-admins can't change their role
+                    (isAdmin() || request.resource.data.role == resource.data.role);
       
       allow delete: if isAdmin();
+    }
+
+    // Whitelist for authorized members
+    match /whitelist/{email} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.token.email.lower() == email);
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.token.email.lower() == email);
     }
 
     // Subscribers
