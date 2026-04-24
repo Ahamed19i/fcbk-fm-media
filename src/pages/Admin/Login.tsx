@@ -21,25 +21,31 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
   // Handle redirect result on mount
   useEffect(() => {
     const handleRedirect = async () => {
-      // Check if we are returning from an auth redirect
-      if (window.location.search.includes('apiKey=') || window.location.hash.includes('access_token=')) {
+      // Check if we are potentially returning from a redirect
+      const isReturnFromAuth = window.location.search.includes('apiKey=') || 
+                               window.location.hash.includes('access_token=') ||
+                               localStorage.getItem('fb-auth-pending') === 'true';
+
+      if (isReturnFromAuth) {
         setIsRedirecting(true);
       }
 
       try {
         const result = await getRedirectResult(auth);
+        localStorage.removeItem('fb-auth-pending');
+        
         if (result) {
           toast.success("Connexion réussie !");
-          // Navigation will be handled by the profile useEffect
+          // The profile useEffect will take over to navigate
         }
       } catch (error: any) {
         console.error("Redirect login error:", error);
+        localStorage.removeItem('fb-auth-pending');
+        
         if (error.code === 'auth/unauthorized-domain') {
-          toast.error("Domaine non autorisé. Veuillez ajouter ce domaine dans la console Firebase.");
-        } else if (error.code === 'auth/popup-closed-by-user') {
-          // Ignore
-        } else {
-          toast.error(`Erreur de connexion : ${error.message}`);
+          toast.error("DOMAINE NON AUTORISÉ : Vérifiez que fcbk-fm-media.vercel.app est bien dans votre console Firebase.");
+        } else if (error.code !== 'auth/popup-closed-by-user') {
+          toast.error(`Erreur: ${error.message}`);
         }
       } finally {
         setIsRedirecting(false);
@@ -50,46 +56,45 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
 
   // Redirect if already logged in and profile is ready
   useEffect(() => {
-    if (profile && !profileLoading) {
-      const from = (location.state as any)?.from?.pathname || '/admin';
+    if (profile && !profileLoading && !isRedirecting) {
+      const from = (location.state as any)?.from?.pathname || "/admin";
       navigate(from, { replace: true });
     }
-  }, [profile, profileLoading, navigate, location]);
+  }, [profile, profileLoading, navigate, location, isRedirecting]);
 
   const handleGoogleLogin = async () => {
     if (loading || isRedirecting) return;
     setLoading(true);
     
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ 
-      prompt: 'select_account'
-    });
+    provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      // Try popup first
+      // Always try popup first, it's easier
       await signInWithPopup(auth, provider);
       toast.success("Connexion réussie !");
     } catch (error: any) {
       console.error("Login error:", error);
       
-      if (error.code === 'auth/popup-blocked') {
-        toast.info("Le popup est bloqué. Tentative par redirection...");
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+        toast.info("Tentative de connexion par redirection...");
         setIsRedirecting(true);
+        localStorage.setItem('fb-auth-pending', 'true');
         try {
           await signInWithRedirect(auth, provider);
         } catch (redirError: any) {
           setIsRedirecting(false);
+          localStorage.removeItem('fb-auth-pending');
           toast.error("Échec de la redirection: " + redirError.message);
         }
       } else if (error.code === 'auth/unauthorized-domain') {
-        toast.error("DOMAINE NON AUTORISÉ : L'URL fcbk-fm-media.vercel.app doit être ajoutée dans la section Authentification > Paramètres > Domaines autorisés de votre projet Firebase.");
-      } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
-        // Just ignore
+        toast.error("ERREUR DE DOMAINE : fcbk-fm-media.vercel.app n'est pas autorisé dans Firebase.");
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setLoading(false);
       } else {
-        toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
+        toast.error(`Erreur: ${error.message}`);
       }
     } finally {
-      // Don't disable loading state if we are in the middle of a redirect
       if (!isRedirecting) {
         setLoading(false);
       }
@@ -128,11 +133,26 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
         </div>
 
         <div className="mt-8 text-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
-          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1"> Note pour la production </p>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-            Assurez-vous que <span className="font-mono font-bold">fcbk-fm-media.vercel.app</span> est ajouté aux domaines autorisés dans votre console Firebase.
-          </p>
+          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1"> Diagnostic de Production </p>
+          <div className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight space-y-1">
+            <p>Domaine: <span className="font-mono font-bold">{window.location.hostname}</span></p>
+            <p>Config: {!import.meta.env.VITE_FIREBASE_API_KEY ? "❌ MANQUANTE SUR VERCEL" : "✅ PRÉSENTE"}</p>
+            <p className="pt-2 text-gray-400">
+              Vérifiez vos Variables d'Environnement sur le dashboard Vercel.
+            </p>
+          </div>
         </div>
+
+        {profile && (
+          <div className="mt-4">
+            <button 
+              onClick={() => auth.signOut()}
+              className="text-xs text-red-500 hover:underline w-full text-center"
+            >
+              Se déconnecter ({profile.email})
+            </button>
+          </div>
+        )}
 
         <div className="mt-6 text-center">
           <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold">
