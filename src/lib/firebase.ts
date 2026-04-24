@@ -23,13 +23,15 @@ const isFirebaseConfigured = !!(
 
 if (!isFirebaseConfigured) {
   console.warn("Firebase configuration is incomplete. Check your environment variables (VITE_FIREBASE_...).");
+} else {
+  console.log("Firebase initialized for project:", firebaseConfig.projectId);
 }
 
 const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || '(default)';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firestoreDatabaseId);
+export const db = firestoreDatabaseId === '(default)' ? getFirestore(app) : getFirestore(app, firestoreDatabaseId);
 export const auth = getAuth(app);
 
 export enum OperationType {

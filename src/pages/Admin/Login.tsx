@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -21,13 +22,16 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
   // Handle redirect result on mount
   useEffect(() => {
     const handleRedirect = async () => {
-      // Check if we are potentially returning from a redirect
+      // Small delay to ensure SDK is stable
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const isReturnFromAuth = window.location.search.includes('apiKey=') || 
                                window.location.hash.includes('access_token=') ||
                                localStorage.getItem('fb-auth-pending') === 'true';
 
       if (isReturnFromAuth) {
         setIsRedirecting(true);
+        console.log("Login: Handling potential auth redirect...");
       }
 
       try {
@@ -35,20 +39,35 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
         localStorage.removeItem('fb-auth-pending');
         
         if (result) {
+          console.log("Login: Redirect result found for user", result.user.email);
           toast.success("Connexion réussie !");
-          // The profile useEffect will take over to navigate
+          // Navigation is handled by the profile useEffect
+        } else {
+          // If we thought we were redirecting but got no result after a while
+          if (isReturnFromAuth) {
+            console.log("Login: No redirect result found but was expected.");
+            // If the user object already exists in auth, we might already be logged in
+            if (auth.currentUser) {
+              console.log("Login: User already present in auth instance.");
+            } else {
+              // Safety timeout to stop the spinner if nothing happens
+              setTimeout(() => setIsRedirecting(false), 3000);
+            }
+          }
         }
       } catch (error: any) {
         console.error("Redirect login error:", error);
         localStorage.removeItem('fb-auth-pending');
         
         if (error.code === 'auth/unauthorized-domain') {
-          toast.error("DOMAINE NON AUTORISÉ : Vérifiez que fcbk-fm-media.vercel.app est bien dans votre console Firebase.");
+          toast.error("ERREUR : Le domaine " + window.location.hostname + " n'est pas autorisé.");
         } else if (error.code !== 'auth/popup-closed-by-user') {
           toast.error(`Erreur: ${error.message}`);
         }
       } finally {
-        setIsRedirecting(false);
+        if (!isReturnFromAuth) {
+          setIsRedirecting(false);
+        }
       }
     };
     handleRedirect();
@@ -113,32 +132,71 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
         </div>
 
         <div className="space-y-6">
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading || isRedirecting || profileLoading}
-            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 py-4 rounded-2xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50 dark:text-white shadow-sm"
-          >
-            {(loading || isRedirecting || profileLoading) ? (
+          {(loading || isRedirecting || profileLoading) ? (
+            <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span>{isRedirecting ? "Finalisation..." : "Connexion..."}</span>
+                <span>{isRedirecting ? "Finalisation..." : "Connexion en cours..."}</span>
               </div>
-            ) : (
-              <>
-                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-6 h-6" />
-                <span>Continuer avec Google</span>
-              </>
-            )}
-          </button>
+              {loading && !isRedirecting && (
+                <button 
+                  onClick={() => {
+                    const provider = new GoogleAuthProvider();
+                    provider.setCustomParameters({ prompt: 'select_account' });
+                    setIsRedirecting(true);
+                    localStorage.setItem('fb-auth-pending', 'true');
+                    signInWithRedirect(auth, provider);
+                  }}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Problème avec le popup ? Cliquez ici pour la redirection
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 py-4 rounded-2xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"
+            >
+              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-6 h-6" />
+              <span>Continuer avec Google</span>
+            </button>
+          )}
         </div>
 
         <div className="mt-8 text-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
           <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1"> Diagnostic de Production </p>
           <div className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight space-y-1">
             <p>Domaine: <span className="font-mono font-bold">{window.location.hostname}</span></p>
-            <p>Config: {!import.meta.env.VITE_FIREBASE_API_KEY ? "❌ MANQUANTE SUR VERCEL" : "✅ PRÉSENTE"}</p>
+            <p>Config: {!import.meta.env.VITE_FIREBASE_API_KEY ? "❌ MANQUANTE" : "✅ PRÉSENTE"}</p>
+            <p>Auth: {auth.currentUser ? "Conecté" : "Déconnecté"}</p>
+            {isRedirecting && <p className="text-blue-500 animate-pulse">🔄 Traitement du retour Google...</p>}
             <p className="pt-2 text-gray-400">
-              Vérifiez vos Variables d'Environnement sur le dashboard Vercel.
+              Si "MANQUANTE", redeployez sur Vercel après avoir ajouté les variables VITE_FIREBASE_*.
+            </p>
+            <button 
+              onClick={() => {
+                console.log("DEBUG AUTH STATE:");
+                console.log("Current User:", auth.currentUser?.email || "None");
+                console.log("Auth Persistence:", auth.config.authDomain);
+                localStorage.getItem('fb-auth-pending') && console.log("Pending redirect detected");
+                toast.info(`Email: ${auth.currentUser?.email || "Déconnecté"}`);
+              }}
+              className="mt-2 text-[8px] bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded"
+            >
+              Diagnostic
+            </button>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                toast.success("Lien copié ! Ouvrez-le dans Chrome ou Safari.");
+              }}
+              className="mt-2 text-[8px] bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded ml-2"
+            >
+              Copier le lien
+            </button>
+            <p className="pt-2 text-[8px] text-gray-400">
+              Note: Si vous êtes sur Facebook/WhatsApp, ouvrez ce lien dans votre navigateur habituel (Chrome/Safari).
             </p>
           </div>
         </div>

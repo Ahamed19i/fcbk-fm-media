@@ -43,22 +43,28 @@ export default function App() {
   useEffect(() => {
     seedData();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("Auth state changed:", firebaseUser ? `User detected: ${firebaseUser.email}` : "No user logged in");
+      
       if (firebaseUser) {
         setUser(firebaseUser);
         setProfileLoading(true);
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
+          console.log("Fetching profile from Firestore:", firebaseUser.uid);
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
+            console.log("Profile found in system");
             setProfile({ ...docSnap.data(), uid: firebaseUser.uid } as UserProfile);
           } else {
+            console.log("No profile found. Checking authorization for:", firebaseUser.email);
             // Check if user is in whitelist
             const email = firebaseUser.email?.toLowerCase() || '';
             const whitelistRef = doc(db, 'whitelist', email);
             const whitelistSnap = await getDoc(whitelistRef);
             
             const isAdminEmail = email === "ahassanimhoma20@gmail.com";
+            console.log("Auth check results - Admin:", isAdminEmail, "Whitelist:", whitelistSnap.exists());
             
             if (whitelistSnap.exists() || isAdminEmail) {
               const whitelistData = whitelistSnap.exists() ? whitelistSnap.data() : null;
@@ -73,23 +79,26 @@ export default function App() {
                 bio: ''
               };
               
+              console.log("Creating new authorized profile...");
               await setDoc(docRef, newProfile);
               setProfile(newProfile);
               
               if (whitelistSnap.exists()) {
                 await deleteDoc(whitelistRef);
               }
-              toast.success("Profil créé avec succès ! Bienvenue.");
+              toast.success("Bienvenue ! Votre compte a été configuré.");
             } else {
-              console.error("User not authorized:", email);
-              toast.error("Accès refusé. Votre email n'est pas autorisé.");
-              setProfile(null);
+              console.warn("User not authorized. Signing out.", email);
+              toast.error("Accès refusé. " + email + " n'est pas autorisé.");
               await auth.signOut();
+              setProfile(null);
             }
           }
         } catch (error: any) {
-          console.error("Error in auth flow:", error);
-          if (error.code !== 'permission-denied') {
+          console.error("Critical error in auth flow:", error);
+          if (error.code === 'permission-denied') {
+            toast.error("Vérifiez les règles de sécurité Firestore.");
+          } else {
             toast.error("Erreur de connexion : " + error.message);
           }
         } finally {
@@ -106,6 +115,17 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  // Safety timeout for loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.warn("App: Safety timeout triggered for loading state.");
+        setLoading(false);
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   if (loading) {
     return (
