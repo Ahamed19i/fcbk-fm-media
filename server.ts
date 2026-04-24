@@ -133,168 +133,87 @@ async function startServer() {
     next();
   };
 
-  // API routes
-  app.get("/api/health", async (req, res) => {
-    let dbStatus = "unknown";
-    let articleCount = 0;
-    try {
-      const snap = await firestordb.collection("articles").limit(1).get();
-      dbStatus = "connected";
-      const countSnap = await firestordb.collection("articles").count().get();
-      articleCount = countSnap.data().count;
-    } catch (e: any) {
-      dbStatus = `error: ${e.message}`;
-    }
-
-    res.json({ 
-      status: "ok", 
-      timestamp: new Date().toISOString(),
-      database: {
-        id: FIRESTORE_DATABASE_ID,
-        status: dbStatus,
-        articleCount
-      },
-      env: process.env.NODE_ENV
-    });
+  // Simple health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Articles API with caching and optimization
-  app.get("/api/articles", publicCache, async (req, res) => {
+  // Articles API - Simple and direct
+  app.get("/api/articles", async (req, res) => {
     try {
       const { limit = 50, category } = req.query;
+      let querySnapshot;
       
-      // OPTIMIZATION: Fetch all articles and filter in memory to avoid missing index errors
-      // In production with thousands of articles, you would need composite indexes
-      const snapshot = await firestordb.collection("articles")
-        .limit(200) // Safety limit for in-memory filtering
-        .get();
-      
-      if (snapshot.empty) {
-        // Try to trigger seeding if empty
-        console.log("Articles collection is empty, triggering seed...");
-        await seedIfEmpty();
-        // Return empty array for this request, next one should have data
-        return res.json([]);
+      if (category && category !== 'all') {
+        querySnapshot = await firestordb.collection("articles")
+          .where("category", "==", category)
+          .limit(Number(limit))
+          .get();
+      } else {
+        querySnapshot = await firestordb.collection("articles")
+          .limit(Number(limit))
+          .get();
       }
 
-      let articles = snapshot.docs.map(doc => ({
+      if (querySnapshot.empty) {
+        await seedIfEmpty();
+        const retrySnap = await firestordb.collection("articles").limit(5).get();
+        const articles = retrySnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+        return res.json(articles);
+      }
+
+      const articles = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data() as any
       }));
 
-      // Filter
-      articles = articles.filter(a => a.status === "published");
-      if (category && category !== 'all') {
-        articles = articles.filter(a => a.category === category);
-      }
-
-      // Sort
+      // In-memory sort
       articles.sort((a, b) => {
-        const dateA = new Date(a.publishedAt || a.createdAt || 0).getTime();
-        const dateB = new Date(b.publishedAt || b.createdAt || 0).getTime();
-        return dateB - dateA;
+        const da = new Date(a.publishedAt || a.createdAt || 0).getTime();
+        const db = new Date(b.publishedAt || b.createdAt || 0).getTime();
+        return db - da;
       });
-
-      // Limit
-      articles = articles.slice(0, Number(limit));
 
       res.json(articles);
     } catch (error: any) {
-      console.error("Error fetching articles:", error);
-      res.status(500).json({ error: "Failed to fetch articles", message: error.message });
+      console.error("API Error articles:", error);
+      res.status(500).json({ error: "Fetch failed", details: error.message });
     }
   });
 
-  app.get("/api/articles/:slug", publicCache, async (req, res) => {
+  app.get("/api/articles/:slug", async (req, res) => {
     try {
-      const { slug } = req.params;
-      const snapshot = await firestordb.collection("articles")
-        .where("slug", "==", slug)
-        .limit(1)
-        .get();
-
-      if (snapshot.empty) {
-        return res.status(404).json({ error: "Article not found" });
-      }
-
-      const doc = snapshot.docs[0];
-      const articleData = doc.data() as any;
-      
-      if (articleData.status !== "published") {
-        return res.status(404).json({ error: "Article non publié" });
-      }
-      
-      // OPTIMIZATION: Fetch author info in the same request to save client-side roundtrips
-      let author = null;
-      const authorId = articleData.authorId || articleData.authorid;
-      if (authorId) {
-        const authorSnap = await firestordb.collection("users").doc(authorId).get();
-        if (authorSnap.exists) {
-          const authData = authorSnap.data();
-          author = {
-            uid: authorSnap.id,
-            displayName: authData?.displayName,
-            photoURL: authData?.photoURL,
-            role: authData?.role,
-            bio: authData?.bio
-          };
-        }
-      }
-
-      // OPTIMIZATION: Fetch few related articles (same category)
-      const relatedSnap = await firestordb.collection("articles")
-        .where("category", "==", articleData.category)
-        .where("status", "==", "published")
-        .orderBy("publishedAt", "desc")
-        .limit(5)
-        .get();
-      
-      const related = relatedSnap.docs
-        .filter(d => d.id !== doc.id)
-        .slice(0, 4)
-        .map(d => ({ id: d.id, ...d.data() }));
-
-      res.json({
-        ...articleData,
-        id: doc.id,
-        author,
-        related
-      });
+      const snap = await firestordb.collection("articles").where("slug", "==", req.params.slug).limit(1).get();
+      if (snap.empty) return res.status(404).json({ error: "Article non trouvé" });
+      const doc = snap.docs[0];
+      res.json({ id: doc.id, ...doc.data() as any });
     } catch (error: any) {
-      console.error("Error fetching article:", error);
-      res.status(500).json({ error: "Failed to fetch article", message: error.message });
+      res.status(500).json({ error: "Erreur serveur", message: error.message });
     }
   });
 
-  app.get("/api/categories", publicCache, async (req, res) => {
+  app.get("/api/categories", async (req, res) => {
     try {
-      const snapshot = await firestordb.collection("categories").orderBy("order", "asc").get();
+      const snapshot = await firestordb.collection("categories").get();
       const categories = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       res.json(categories);
     } catch (error) {
-      console.error("Error fetching categories:", error);
       res.status(500).json({ error: "Failed to fetch categories" });
     }
   });
 
-  app.get("/api/authors", publicCache, async (req, res) => {
+  app.get("/api/authors", async (req, res) => {
     try {
-      const snapshot = await firestordb.collection("users")
-        .where("role", "in", ["admin", "editor", "journalist"])
-        .get();
+      const snapshot = await firestordb.collection("users").get();
       const authors = snapshot.docs.map(doc => ({
         uid: doc.id,
-        displayName: doc.data().displayName,
-        photoURL: doc.data().photoURL,
-        role: doc.data().role,
-        bio: doc.data().bio
+        ...doc.data() as any
       }));
       res.json(authors);
     } catch (error) {
-      console.error("Error fetching authors:", error);
       res.status(500).json({ error: "Failed to fetch authors" });
     }
   });

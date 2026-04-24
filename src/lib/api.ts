@@ -1,4 +1,5 @@
 
+
 import axios from 'axios';
 import useSWR from 'swr';
 
@@ -16,31 +17,19 @@ export const fetcher = (url: string) => api.get(url).then((res) => {
 
 export const useArticles = (params: { limit?: number; category?: string } = {}) => {
   const query = new URLSearchParams(params as any).toString();
-  return useSWR(`/articles${query ? `?${query}` : ''}`, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 60000, // 1 minute
-  });
+  return useSWR(`/articles${query ? `?${query}` : ''}`, fetcher);
 };
 
 export const useArticle = (slug: string | undefined) => {
-  return useSWR(slug ? `/articles/${slug}` : null, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 60000,
-  });
+  return useSWR(slug ? `/articles/${slug}` : null, fetcher);
 };
 
 export const useCategories = () => {
-  return useSWR('/categories', fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 3600000, // 1 hour for categories (mostly static)
-  });
+  return useSWR('/categories', fetcher);
 };
 
 export const useAuthors = () => {
-  return useSWR('/authors', fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 3600000,
-  });
+  return useSWR('/authors', fetcher);
 };
 
 export default api;
