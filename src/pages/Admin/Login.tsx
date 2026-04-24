@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -31,9 +32,15 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
       await signInWithPopup(auth, provider);
       toast.success("Connexion réussie !");
       // App.tsx will handle the profile check and ProtectedRoute will handle the final redirection
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast.error("Erreur lors de la connexion.");
+      if (error.code === 'auth/popup-blocked') {
+        toast.error("Le popup de connexion a été bloqué par votre navigateur. Veuillez l'autoriser.");
+      } else if (error.code === 'auth/unauthorized-domain') {
+        toast.error("Ce domaine n'est pas autorisé pour la connexion. Veuillez contacter l'administrateur.");
+      } else {
+        toast.error("Erreur lors de la connexion. Vérifiez votre connexion internet.");
+      }
     } finally {
       setLoading(false);
     }

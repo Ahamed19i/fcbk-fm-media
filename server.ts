@@ -44,6 +44,59 @@ if (!admin.apps.length) {
 const FIRESTORE_DATABASE_ID = "ai-studio-9660e84f-5cca-4695-9c34-462ec8e31f0e";
 const firestordb = getFirestore(firebaseApp, FIRESTORE_DATABASE_ID);
 
+// SERVER-SIDE SEEDING
+async function seedIfEmpty() {
+  try {
+    const snapshot = await firestordb.collection("articles").limit(1).get();
+    if (snapshot.empty) {
+      console.log("Seeding articles from server...");
+      const articles = [
+        {
+          title: "Élections aux Comores : Les enjeux du scrutin présidentiel",
+          slug: "elections-comores-enjeux-scrutin-presidentiel",
+          content: "Le pays se prépare pour un moment historique...",
+          excerpt: "Analyse complète des forces en présence.",
+          mainImage: "https://picsum.photos/seed/comores1/1200/800",
+          category: "politique",
+          status: "published",
+          isBreaking: true,
+          views: 1250,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          publishedAt: new Date().toISOString(),
+          tags: ["élections", "politique", "Comores"],
+          authorId: "system"
+        },
+        {
+          title: "FCBK FM : 300 000 abonnés, un record pour le média comorien",
+          slug: "fcbk-fm-record-abonnes-media-comorien",
+          content: "La plateforme d'information continue de croître...",
+          excerpt: "Une étape majeure franchie par l'équipe de FCBK FM.",
+          mainImage: "https://picsum.photos/seed/media/1200/800",
+          category: "national",
+          status: "published",
+          isBreaking: false,
+          views: 890,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          publishedAt: new Date().toISOString(),
+          tags: ["média", "FCBK FM", "record"],
+          authorId: "system"
+        }
+      ];
+      
+      for (const article of articles) {
+        await firestordb.collection("articles").add(article);
+      }
+      console.log("Server-side seeding complete.");
+    }
+  } catch (err) {
+    console.error("Seeding error:", err);
+  }
+}
+
+seedIfEmpty();
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -65,20 +118,30 @@ async function startServer() {
   app.get("/api/articles", publicCache, async (req, res) => {
     try {
       const { limit = 50, category } = req.query;
-      let query = firestordb.collection("articles")
-        .where("status", "==", "published")
-        .orderBy("publishedAt", "desc")
-        .limit(Number(limit));
+      
+      // OPTIMIZATION: Fetch all articles and filter in memory to avoid missing index errors
+      // In production with thousands of articles, you would need composite indexes
+      const snapshot = await firestordb.collection("articles").get();
+      let articles = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as any
+      }));
 
+      // Filter
+      articles = articles.filter(a => a.status === "published");
       if (category && category !== 'all') {
-        query = query.where("category", "==", category);
+        articles = articles.filter(a => a.category === category);
       }
 
-      const snapshot = await query.get();
-      const articles = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      // Sort
+      articles.sort((a, b) => {
+        const dateA = new Date(a.publishedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.publishedAt || b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+
+      // Limit
+      articles = articles.slice(0, Number(limit));
 
       res.json(articles);
     } catch (error: any) {
@@ -92,7 +155,6 @@ async function startServer() {
       const { slug } = req.params;
       const snapshot = await firestordb.collection("articles")
         .where("slug", "==", slug)
-        .where("status", "==", "published")
         .limit(1)
         .get();
 
@@ -101,7 +163,11 @@ async function startServer() {
       }
 
       const doc = snapshot.docs[0];
-      const articleData = doc.data();
+      const articleData = doc.data() as any;
+      
+      if (articleData.status !== "published") {
+        return res.status(404).json({ error: "Article non publié" });
+      }
       
       // OPTIMIZATION: Fetch author info in the same request to save client-side roundtrips
       let author = null;
@@ -154,6 +220,7 @@ async function startServer() {
       }));
       res.json(categories);
     } catch (error) {
+      console.error("Error fetching categories:", error);
       res.status(500).json({ error: "Failed to fetch categories" });
     }
   });
@@ -172,6 +239,7 @@ async function startServer() {
       }));
       res.json(authors);
     } catch (error) {
+      console.error("Error fetching authors:", error);
       res.status(500).json({ error: "Failed to fetch authors" });
     }
   });
