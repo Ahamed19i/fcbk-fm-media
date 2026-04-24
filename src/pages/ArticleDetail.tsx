@@ -1,12 +1,12 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, limit, getDocs, updateDoc, increment, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useArticle } from '../lib/api';
 import { Article, UserProfile } from '../types';
-import { formatDate, normalizeDate } from '../lib/utils';
+import { formatDate } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
-import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight, User as UserIcon, Zap } from 'lucide-react';
+import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon, ChevronRight, User as UserIcon, Zap, AlertCircle } from 'lucide-react';
 import ArticleCard from '../components/ArticleCard';
 import NewsletterBox from '../components/NewsletterBox';
 import { toast } from 'sonner';
@@ -14,112 +14,30 @@ import SEO from '../components/SEO';
 
 export default function ArticleDetail() {
   const { slug } = useParams<{ slug: string }>();
-  const [article, setArticle] = useState<Article | null>(null);
-  const [author, setAuthor] = useState<UserProfile | null>(null);
-  const [related, setRelated] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: fullArticle, error, isLoading } = useArticle(slug);
 
   useEffect(() => {
-    const fetchArticle = async () => {
-      setLoading(true);
-      setAuthor(null);
-      setRelated([]);
-      try {
-        const q = query(collection(db, 'articles'), where('slug', '==', slug), limit(1));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const docData = querySnapshot.docs[0];
-          const rawData = docData.data();
-          const articleData = { 
-            id: docData.id, 
-            ...rawData,
-            authorId: rawData.authorId || (rawData as any).authorid
-          } as Article;
-          
-          setArticle(articleData);
-
-          // Increment views
-          try {
-            await updateDoc(doc(db, 'articles', docData.id), {
-              views: increment(1)
-            });
-          } catch (e) {
-            console.warn("Failed to increment views:", e);
-          }
-
-          // Fetch author from users collection
-          const defaultAuthor: UserProfile = {
-            uid: 'default',
-            displayName: 'Rédaction FCBK FM',
-            role: 'journalist',
-            bio: "Journaliste passionné couvrant l'actualité pour FCBK FM.",
-            email: '',
-            createdAt: ''
-          };
-
-          if (articleData.authorId) {
-            try {
-              const userSnap = await getDoc(doc(db, 'users', articleData.authorId));
-              if (userSnap.exists()) {
-                setAuthor({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
-              } else {
-                setAuthor(defaultAuthor);
-              }
-            } catch (e) {
-              console.warn("Failed to fetch author:", e);
-              setAuthor(defaultAuthor);
-            }
-          } else {
-            setAuthor(defaultAuthor);
-          }
-
-          // Fetch related articles (Strictly same category)
-          let categoryRelated: Article[] = [];
-          
-          try {
-            // Fetch from the same category
-            const relatedQ = query(
-              collection(db, 'articles'),
-              where('category', '==', articleData.category),
-              limit(10)
-            );
-            
-            const relatedSnap = await getDocs(relatedQ);
-            categoryRelated = relatedSnap.docs
-              .map(d => {
-                const data = d.data();
-                return { 
-                  id: d.id, 
-                  ...data,
-                  authorId: data.authorId || (data as any).authorid
-                } as Article;
-              })
-              .filter(a => a.id !== articleData.id && (a.status === 'published' || !a.status))
-              .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime())
-              .slice(0, 4);
-          } catch (e) {
-            console.warn("Failed to fetch related by category:", e);
-          }
-          
-          setRelated(categoryRelated);
+    // Only increment views if we have an article ID
+    if (fullArticle?.id) {
+      const incrementViews = async () => {
+        try {
+          await updateDoc(doc(db, 'articles', fullArticle.id), {
+            views: increment(1)
+          });
+        } catch (e) {
+          console.warn("Failed to increment views:", e);
         }
-      } catch (error) {
-        console.error("Error fetching article:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (slug) fetchArticle();
-  }, [slug]);
+      };
+      incrementViews();
+    }
+  }, [fullArticle?.id]);
 
   const copyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     toast.success("Lien copié dans le presse-papier !");
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 flex justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
@@ -127,14 +45,25 @@ export default function ArticleDetail() {
     );
   }
 
-  if (!article) {
+  if (error || !fullArticle) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-2xl font-bold mb-4">Article non trouvé</h2>
+        {error ? (
+          <>
+            <AlertCircle className="mx-auto mb-4 text-red-500" size={48} />
+            <h2 className="text-2xl font-bold mb-4 text-red-500">Erreur de chargement</h2>
+          </>
+        ) : (
+          <h2 className="text-2xl font-bold mb-4">Article non trouvé</h2>
+        )}
         <Link to="/" className="text-blue-600 hover:underline">Retour à l'accueil</Link>
       </div>
     );
   }
+
+  const article = fullArticle as Article;
+  const author = fullArticle.author as UserProfile | null;
+  const related = (fullArticle.related || []) as Article[];
 
   return (
     <article className="bg-white dark:bg-gray-950 transition-colors duration-300 min-h-screen">

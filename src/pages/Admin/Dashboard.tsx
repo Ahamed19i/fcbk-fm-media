@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, deleteDoc, doc, where } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';

@@ -1,15 +1,41 @@
-
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import dotenv from "dotenv";
+import admin from "firebase-admin";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  try {
+    // Check if we have a service account JSON string in env
+    const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (serviceAccountVar) {
+      const serviceAccount = JSON.parse(serviceAccountVar);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    } else {
+      // Fallback to application default credentials or project ID
+      admin.initializeApp({
+        projectId: "gen-lang-client-0892197534"
+      });
+    }
+  } catch (err) {
+    console.error("Firebase Admin initialization error:", err);
+  }
+}
+
+const db = admin.firestore();
+// Set specific database ID if provided in config
+const FIRESTORE_DATABASE_ID = "ai-studio-9660e84f-5cca-4695-9c34-462ec8e31f0e";
+const firestordb = admin.firestore(admin.app()); // Default instance
 
 async function startServer() {
   const app = express();
@@ -17,9 +43,130 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Cache-Control middleware for API routes
+  const publicCache = (req: any, res: any, next: any) => {
+    res.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    next();
+  };
+
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Articles API with caching and optimization
+  app.get("/api/articles", publicCache, async (req, res) => {
+    try {
+      const { limit = 50, category } = req.query;
+      let query = firestordb.collection("articles")
+        .where("status", "==", "published")
+        .orderBy("publishedAt", "desc")
+        .limit(Number(limit));
+
+      if (category && category !== 'all') {
+        query = query.where("category", "==", category);
+      }
+
+      const snapshot = await query.get();
+      const articles = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      res.json(articles);
+    } catch (error: any) {
+      console.error("Error fetching articles:", error);
+      res.status(500).json({ error: "Failed to fetch articles", message: error.message });
+    }
+  });
+
+  app.get("/api/articles/:slug", publicCache, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const snapshot = await firestordb.collection("articles")
+        .where("slug", "==", slug)
+        .where("status", "==", "published")
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        return res.status(404).json({ error: "Article not found" });
+      }
+
+      const doc = snapshot.docs[0];
+      const articleData = doc.data();
+      
+      // OPTIMIZATION: Fetch author info in the same request to save client-side roundtrips
+      let author = null;
+      const authorId = articleData.authorId || articleData.authorid;
+      if (authorId) {
+        const authorSnap = await firestordb.collection("users").doc(authorId).get();
+        if (authorSnap.exists) {
+          const authData = authorSnap.data();
+          author = {
+            uid: authorSnap.id,
+            displayName: authData?.displayName,
+            photoURL: authData?.photoURL,
+            role: authData?.role,
+            bio: authData?.bio
+          };
+        }
+      }
+
+      // OPTIMIZATION: Fetch few related articles (same category)
+      const relatedSnap = await firestordb.collection("articles")
+        .where("category", "==", articleData.category)
+        .where("status", "==", "published")
+        .orderBy("publishedAt", "desc")
+        .limit(5)
+        .get();
+      
+      const related = relatedSnap.docs
+        .filter(d => d.id !== doc.id)
+        .slice(0, 4)
+        .map(d => ({ id: d.id, ...d.data() }));
+
+      res.json({
+        ...articleData,
+        id: doc.id,
+        author,
+        related
+      });
+    } catch (error: any) {
+      console.error("Error fetching article:", error);
+      res.status(500).json({ error: "Failed to fetch article", message: error.message });
+    }
+  });
+
+  app.get("/api/categories", publicCache, async (req, res) => {
+    try {
+      const snapshot = await firestordb.collection("categories").orderBy("order", "asc").get();
+      const categories = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  app.get("/api/authors", publicCache, async (req, res) => {
+    try {
+      const snapshot = await firestordb.collection("users")
+        .where("role", "in", ["admin", "editor", "journalist"])
+        .get();
+      const authors = snapshot.docs.map(doc => ({
+        uid: doc.id,
+        displayName: doc.data().displayName,
+        photoURL: doc.data().photoURL,
+        role: doc.data().role,
+        bio: doc.data().bio
+      }));
+      res.json(authors);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch authors" });
+    }
   });
 
   // Newsletter subscription (Brevo)
