@@ -47,59 +47,70 @@ export default function App() {
       
       if (firebaseUser) {
         setUser(firebaseUser);
+        const email = firebaseUser.email?.toLowerCase() || '';
+        const isAdminEmail = email === "ahassanimhoma20@gmail.com";
         setProfileLoading(true);
+
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
-          console.log("Fetching profile from Firestore:", firebaseUser.uid);
+          console.log("App: Fetching profile for", email);
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
-            console.log("Profile found in system");
             setProfile({ ...docSnap.data(), uid: firebaseUser.uid } as UserProfile);
           } else {
-            console.log("No profile found. Checking authorization for:", firebaseUser.email);
-            // Check if user is in whitelist
-            const email = firebaseUser.email?.toLowerCase() || '';
+            console.log("App: No profile found. Checking authorization...");
             const whitelistRef = doc(db, 'whitelist', email);
-            const whitelistSnap = await getDoc(whitelistRef);
+            let whitelistSnap;
+            try {
+              whitelistSnap = await getDoc(whitelistRef);
+            } catch (e) {
+              console.warn("App: Whitelist check failed, likely rules or missing collection. Admin bypass check follows.");
+            }
             
-            const isAdminEmail = email === "ahassanimhoma20@gmail.com";
-            console.log("Auth check results - Admin:", isAdminEmail, "Whitelist:", whitelistSnap.exists());
-            
-            if (whitelistSnap.exists() || isAdminEmail) {
-              const whitelistData = whitelistSnap.exists() ? whitelistSnap.data() : null;
+            if (isAdminEmail || (whitelistSnap && whitelistSnap.exists())) {
+              const whitelistData = whitelistSnap && whitelistSnap.exists() ? whitelistSnap.data() : null;
               
               const newProfile: UserProfile = {
                 uid: firebaseUser.uid,
                 email: email,
-                displayName: firebaseUser.displayName || 'Nouvel Utilisateur',
+                displayName: firebaseUser.displayName || 'Administrateur',
                 photoURL: firebaseUser.photoURL || '',
                 role: isAdminEmail ? 'admin' : (whitelistData?.role || 'journalist'),
                 createdAt: new Date().toISOString(),
                 bio: ''
               };
               
-              console.log("Creating new authorized profile...");
+              console.log("App: Auto-authorizing and creating profile for admin/whitelist user");
               await setDoc(docRef, newProfile);
               setProfile(newProfile);
               
-              if (whitelistSnap.exists()) {
-                await deleteDoc(whitelistRef);
+              if (whitelistSnap && whitelistSnap.exists()) {
+                try { await deleteDoc(whitelistRef); } catch (e) { /* ignore */ }
               }
-              toast.success("Bienvenue ! Votre compte a été configuré.");
+              toast.success("Activation du compte réussie !");
             } else {
-              console.warn("User not authorized. Signing out.", email);
-              toast.error("Accès refusé. " + email + " n'est pas autorisé.");
+              console.error("App: Unauthorized access attempt:", email);
+              toast.error(`Accès refusé. ${email} n'est pas dans la liste autorisée.`);
               await auth.signOut();
               setProfile(null);
             }
           }
         } catch (error: any) {
-          console.error("Critical error in auth flow:", error);
-          if (error.code === 'permission-denied') {
-            toast.error("Vérifiez les règles de sécurité Firestore.");
-          } else {
-            toast.error("Erreur de connexion : " + error.message);
+          console.error("App: Auth profile flow error:", error);
+          if (isAdminEmail) {
+            console.log("App: Emergency fallback for admin email due to Firestore error");
+            setProfile({
+              uid: firebaseUser.uid,
+              email: email,
+              displayName: firebaseUser.displayName || 'Admin (Session)',
+              photoURL: firebaseUser.photoURL || '',
+              role: 'admin',
+              createdAt: new Date().toISOString(),
+              bio: 'Emergency admin session'
+            });
+          } else if (error.code !== 'permission-denied') {
+            toast.error("Erreur technique: " + error.message);
           }
         } finally {
           setProfileLoading(false);
