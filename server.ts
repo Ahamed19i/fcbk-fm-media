@@ -1,3 +1,5 @@
+
+
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -6,36 +8,41 @@ import axios from "axios";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
 
+import { getFirestore } from "firebase-admin/firestore";
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin
+let firebaseApp: admin.app.App;
 if (!admin.apps.length) {
   try {
     // Check if we have a service account JSON string in env
     const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (serviceAccountVar) {
       const serviceAccount = JSON.parse(serviceAccountVar);
-      admin.initializeApp({
+      firebaseApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
     } else {
       // Fallback to application default credentials or project ID
-      admin.initializeApp({
+      firebaseApp = admin.initializeApp({
         projectId: "gen-lang-client-0892197534"
       });
     }
   } catch (err) {
     console.error("Firebase Admin initialization error:", err);
+    firebaseApp = admin.app();
   }
+} else {
+  firebaseApp = admin.app();
 }
 
-const db = admin.firestore();
 // Set specific database ID if provided in config
 const FIRESTORE_DATABASE_ID = "ai-studio-9660e84f-5cca-4695-9c34-462ec8e31f0e";
-const firestordb = admin.firestore(admin.app()); // Default instance
+const firestordb = getFirestore(firebaseApp, FIRESTORE_DATABASE_ID);
 
 async function startServer() {
   const app = express();
