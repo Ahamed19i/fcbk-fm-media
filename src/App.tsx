@@ -48,7 +48,7 @@ export default function App() {
       if (firebaseUser) {
         setUser(firebaseUser);
         const email = firebaseUser.email?.toLowerCase() || '';
-        const isAdminEmail = email === "ahassanimhoma20@gmail.com";
+        const isAdminEmail = email.trim().toLowerCase() === "ahassanimhoma20@gmail.com";
         setProfileLoading(true);
 
         try {

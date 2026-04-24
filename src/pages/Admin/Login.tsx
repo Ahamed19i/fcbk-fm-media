@@ -22,8 +22,8 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
   // Handle redirect result on mount
   useEffect(() => {
     const handleRedirect = async () => {
-      // Small delay to ensure SDK is stable
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Small delay to ensure SDK is stable and has attempted to recover session
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       const isReturnFromAuth = window.location.search.includes('apiKey=') || 
                                window.location.hash.includes('access_token=') ||
@@ -31,7 +31,7 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
 
       if (isReturnFromAuth) {
         setIsRedirecting(true);
-        console.log("Login: Handling potential auth redirect...");
+        console.log("AdminLogin: Detected return from OAuth redirect, waiting for result...");
       }
 
       try {
@@ -39,34 +39,33 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
         localStorage.removeItem('fb-auth-pending');
         
         if (result) {
-          console.log("Login: Redirect result found for user", result.user.email);
+          console.log("AdminLogin: Successfully recovered user from redirect:", result.user.email);
           toast.success("Connexion réussie !");
           // Navigation is handled by the profile useEffect
-        } else {
-          // If we thought we were redirecting but got no result after a while
-          if (isReturnFromAuth) {
-            console.log("Login: No redirect result found but was expected.");
-            // If the user object already exists in auth, we might already be logged in
-            if (auth.currentUser) {
-              console.log("Login: User already present in auth instance.");
-            } else {
-              // Safety timeout to stop the spinner if nothing happens
-              setTimeout(() => setIsRedirecting(false), 3000);
-            }
+        } else if (isReturnFromAuth) {
+          console.log("AdminLogin: No redirect result, but check if user exists anyway...");
+          if (auth.currentUser) {
+            console.log("AdminLogin: User already authenticated:", auth.currentUser.email);
+            setIsRedirecting(false);
+          } else {
+            // Give it one last chance
+            setTimeout(() => {
+              if (!auth.currentUser) {
+                setIsRedirecting(false);
+                console.log("AdminLogin: Giving up on redirect result.");
+              }
+            }, 2000);
           }
         }
       } catch (error: any) {
-        console.error("Redirect login error:", error);
+        console.error("AdminLogin: Redirect completion error:", error);
         localStorage.removeItem('fb-auth-pending');
+        setIsRedirecting(false);
         
         if (error.code === 'auth/unauthorized-domain') {
-          toast.error("ERREUR : Le domaine " + window.location.hostname + " n'est pas autorisé.");
+          toast.error("ERREUR DOMAINE : L'URL " + window.location.hostname + " doit être ajoutée aux 'Domaines autorisés' dans Firebase.");
         } else if (error.code !== 'auth/popup-closed-by-user') {
-          toast.error(`Erreur: ${error.message}`);
-        }
-      } finally {
-        if (!isReturnFromAuth) {
-          setIsRedirecting(false);
+          toast.error(`Erreur d'authentification : ${error.code}`);
         }
       }
     };
@@ -167,36 +166,36 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
         <div className="mt-8 text-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
           <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1"> Diagnostic de Production </p>
           <div className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight space-y-1">
-            <p>Domaine: <span className="font-mono font-bold">{window.location.hostname}</span></p>
-            <p>Config: {!import.meta.env.VITE_FIREBASE_API_KEY ? "❌ MANQUANTE" : "✅ PRÉSENTE"}</p>
-            <p>Auth: {auth.currentUser ? "Conecté" : "Déconnecté"}</p>
-            {isRedirecting && <p className="text-blue-500 animate-pulse">🔄 Traitement du retour Google...</p>}
-            <p className="pt-2 text-gray-400">
-              Si "MANQUANTE", redeployez sur Vercel après avoir ajouté les variables VITE_FIREBASE_*.
+            <p>Domaine: <span className="font-mono font-bold text-gray-900 dark:text-white">{window.location.hostname}</span></p>
+            <p>Projet IDs: <span className="font-mono">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "non défini"}</span></p>
+            <p>Base de données: <span className="font-mono">{import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)"}</span></p>
+            <p>Config OK: {!import.meta.env.VITE_FIREBASE_API_KEY ? "❌" : "✅"}</p>
+            <p>Status Auth: {auth.currentUser ? "Connecté" : "Déconnecté"}</p>
+            {isRedirecting && <p className="text-blue-500 animate-pulse font-bold">🔄 Finalisation de la session...</p>}
+            <p className="pt-3 text-gray-400">
+              Si les IDs ne correspondent pas à votre console Firebase, modifiez vos variables VITE_FIREBASE_* sur Vercel et redeployez.
             </p>
-            <button 
-              onClick={() => {
-                console.log("DEBUG AUTH STATE:");
-                console.log("Current User:", auth.currentUser?.email || "None");
-                console.log("Auth Persistence:", auth.config.authDomain);
-                localStorage.getItem('fb-auth-pending') && console.log("Pending redirect detected");
-                toast.info(`Email: ${auth.currentUser?.email || "Déconnecté"}`);
-              }}
-              className="mt-2 text-[8px] bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded"
-            >
-              Diagnostic
-            </button>
-            <button 
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                toast.success("Lien copié ! Ouvrez-le dans Chrome ou Safari.");
-              }}
-              className="mt-2 text-[8px] bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded ml-2"
-            >
-              Copier le lien
-            </button>
-            <p className="pt-2 text-[8px] text-gray-400">
-              Note: Si vous êtes sur Facebook/WhatsApp, ouvrez ce lien dans votre navigateur habituel (Chrome/Safari).
+            <div className="flex gap-2 pt-2">
+              <button 
+                onClick={() => {
+                  toast.info(`Email: ${auth.currentUser?.email || "N/A"} | UID: ${auth.currentUser?.uid || "N/A"}`);
+                }}
+                className="flex-1 bg-gray-200 dark:bg-gray-700 px-2 py-1.5 rounded hover:bg-gray-300 transition-colors"
+              >
+                Diagnostic
+              </button>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast.success("Lien copié !");
+                }}
+                className="flex-1 bg-gray-200 dark:bg-gray-700 px-2 py-1.5 rounded hover:bg-gray-300 transition-colors"
+              >
+                Copier lien
+              </button>
+            </div>
+            <p className="pt-2 text-[8px] text-gray-400 leading-tight">
+              ⚠️ Si vous venez de Facebook/WhatsApp, utilisez Safari ou Chrome pour une meilleure compatibilité des cookies Google.
             </p>
           </div>
         </div>

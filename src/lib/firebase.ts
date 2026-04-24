@@ -1,6 +1,8 @@
 
+
+
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Configuration from environment variables (Vite)
@@ -14,25 +16,36 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Check if critical config is missing
 const isFirebaseConfigured = !!(
   firebaseConfig.apiKey && 
   firebaseConfig.authDomain && 
   firebaseConfig.projectId
 );
 
-if (!isFirebaseConfigured) {
-  console.warn("Firebase configuration is incomplete. Check your environment variables (VITE_FIREBASE_...).");
-} else {
-  console.log("Firebase initialized for project:", firebaseConfig.projectId);
-}
-
 const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || '(default)';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
-export const db = firestoreDatabaseId === '(default)' ? getFirestore(app) : getFirestore(app, firestoreDatabaseId);
 export const auth = getAuth(app);
+
+// Ensure local persistence for session recovery across reloads
+if (isFirebaseConfigured) {
+  setPersistence(auth, browserLocalPersistence)
+    .then(() => console.log("Firebase Auth: Persistence set to LOCAL"))
+    .catch((err) => console.error("Firebase Auth: Persistence error", err));
+}
+
+export const db = firestoreDatabaseId === '(default)' ? getFirestore(app) : getFirestore(app, firestoreDatabaseId);
+
+if (!isFirebaseConfigured) {
+  console.warn("Firebase configuration is incomplete. Check environment variables.");
+} else {
+  console.log("Firebase initialized:", {
+    project: firebaseConfig.projectId,
+    database: firestoreDatabaseId,
+    authDomain: firebaseConfig.authDomain
+  });
+}
 
 export enum OperationType {
   CREATE = 'create',
