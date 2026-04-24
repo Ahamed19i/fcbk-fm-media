@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc } from 'firebase/firestore';
@@ -66,20 +67,12 @@ export default function ArticleEditor({ profile }: EditorProps) {
     setErrorMsg(null);
     try {
       const { id: _id, ...cleanFormData } = formData;
-      const currentUserId = profile?.uid || auth.currentUser?.uid;
-      
-      if (!currentUserId) {
-        toast.error("Votre session a expiré. Veuillez vous reconnecter.");
-        setLoading(false);
-        return;
-      }
-
       const data = {
         ...cleanFormData,
         status,
         updatedAt: new Date().toISOString(),
         slug: formData.slug || formData.title?.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
-        authorId: id ? (formData.authorId || currentUserId) : currentUserId,
+        authorId: formData.authorId || profile?.uid || auth.currentUser?.uid || '',
         publishedAt: status === 'published' ? new Date().toISOString() : (formData.publishedAt || null),
         views: formData.views || 0,
         createdAt: formData.createdAt || new Date().toISOString()

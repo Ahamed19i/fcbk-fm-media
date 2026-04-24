@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,7 +25,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
              (getRole() == 'admin' || 
-              request.auth.token.email == "ahassanimhoma20@gmail.com");
+              (request.auth.token.email == "ahassanimhoma20@gmail.com" && request.auth.token.email_verified == true));
     }
     
     function isEditor() {
@@ -32,10 +33,7 @@ service cloud.firestore {
     }
     
     function isJournalist() {
-      return isAuthenticated() && (
-        getRole() in ['journalist', 'editor', 'admin'] || 
-        request.auth.token.email == "ahassanimhoma20@gmail.com"
-      );
+      return isAuthenticated() && (isEditor() || getRole() == 'journalist');
     }
 
     function isOwner(userId) {
@@ -55,12 +53,21 @@ service cloud.firestore {
     // ===============================================================
     
     function isValidArticle(data) {
-      return data.title is string && data.title.size() > 0 &&
-             data.content is string && data.content.size() > 0 &&
-             data.authorId is string &&
+      return hasOnlyAllowedFields(['title', 'content', 'category', 'authorId', 'status', 'mainImage', 'excerpt', 'slug', 'createdAt', 'updatedAt', 'tags', 'views', 'isBreaking', 'publishedAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 100000 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.authorId is string && data.authorId.size() >= 20 && data.authorId.size() <= 128 &&
              data.status in ['draft', 'published', 'scheduled'] &&
              data.createdAt is string &&
-             data.updatedAt is string;
+             data.updatedAt is string &&
+             data.slug is string &&
+             data.views is number &&
+             (!('mainImage' in data) || (data.mainImage is string && data.mainImage.size() <= 2048)) &&
+             (!('excerpt' in data) || (data.excerpt is string && data.excerpt.size() <= 1000)) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('isBreaking' in data) || data.isBreaking is bool) &&
+             (!('publishedAt' in data) || data.publishedAt == null || data.publishedAt is string);
     }
 
     function isValidUser(data) {

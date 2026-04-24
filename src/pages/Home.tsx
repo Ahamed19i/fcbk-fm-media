@@ -1,27 +1,53 @@
-
-
-import React, { useMemo } from 'react';
-import { useArticles } from '../lib/api';
+import React, { useState, useEffect } from 'react';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
-import { ChevronRight, TrendingUp, Zap, AlertCircle } from 'lucide-react';
+import { ChevronRight, TrendingUp, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import NewsletterBox from '../components/NewsletterBox';
+import { normalizeDate } from '../lib/utils';
 
 export default function Home() {
-  const { data, error, isLoading } = useArticles({ limit: 50 });
-  const articles = Array.isArray(data) ? data : [];
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [breakingNews, setBreakingNews] = useState<Article | null>(null);
+  const [trending, setTrending] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { breakingNews, trending } = useMemo(() => {
-    if (articles.length === 0) return { breakingNews: null, trending: [] };
-    return {
-      breakingNews: articles.find((a: Article) => a.isBreaking) || articles[0],
-      trending: articles.slice(1, 6)
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const q = query(
+          collection(db, 'articles'),
+          limit(50)
+        );
+        const querySnapshot = await getDocs(q);
+        const fetchedArticles = querySnapshot.docs.map(doc => {
+          const data = doc.data() as any;
+          return { 
+            id: doc.id, 
+            ...data,
+            authorId: data.authorId || data.authorid
+          } as Article;
+        })
+        .filter(a => a.status === 'published' || !a.status)
+        .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime());
+        
+        setArticles(fetchedArticles);
+        setBreakingNews(fetchedArticles.find(a => a.isBreaking) || fetchedArticles[0]);
+        setTrending(fetchedArticles.slice(1, 6));
+      } catch (error) {
+        console.error("Error fetching articles:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [articles]);
 
-  if (isLoading) {
+    fetchArticles();
+  }, []);
+
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 flex justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
@@ -29,20 +55,9 @@ export default function Home() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center text-red-500">
-        <AlertCircle className="mx-auto mb-4" size={48} />
-        <p className="font-bold">Erreur lors de la récupération des actualités.</p>
-        <button onClick={() => window.location.reload()} className="mt-4 text-blue-600 font-bold hover:underline">Réessayer</button>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white dark:bg-gray-950 transition-colors duration-300">
       <SEO />
-      
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {breakingNews && <ArticleCard article={breakingNews} variant="large" />}
@@ -99,7 +114,7 @@ export default function Home() {
               {/* Social Box */}
               <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800">
                 <h3 className="font-bold mb-4 dark:text-white">Suivez-nous sur Facebook</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 300 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Rejoignez plus de 224 000 abonnés pour ne rien rater de l'actualité comorienne.</p>
                 <a 
                   href="https://www.facebook.com/fcbkfmcomores" 
                   target="_blank" 

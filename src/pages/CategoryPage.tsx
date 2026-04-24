@@ -1,35 +1,63 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useArticles } from '../lib/api';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
-import { ChevronRight, Zap, AlertCircle } from 'lucide-react';
+import { ChevronRight, Zap } from 'lucide-react';
 import SEO from '../components/SEO';
+import { normalizeDate } from '../lib/utils';
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: articles = [], error, isLoading } = useArticles({ 
-    category: slug === 'all' ? undefined : slug,
-    limit: 50 
-  });
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const articlesArray = Array.isArray(articles) ? articles : [];
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setLoading(true);
+      try {
+        let q;
+        if (slug === 'all') {
+          q = query(
+            collection(db, 'articles'),
+            limit(50)
+          );
+        } else {
+          q = query(
+            collection(db, 'articles'),
+            where('category', '==', slug),
+            limit(50)
+          );
+        }
+        const querySnapshot = await getDocs(q);
+        const fetched = querySnapshot.docs.map(d => {
+          const data = d.data() as any;
+          return { 
+            id: d.id, 
+            ...data,
+            authorId: data.authorId || data.authorid
+          } as Article;
+        })
+        .filter(a => a.status === 'published' || !a.status)
+        .sort((a, b) => normalizeDate(b.publishedAt || b.createdAt).getTime() - normalizeDate(a.publishedAt || a.createdAt).getTime());
+        
+        setArticles(fetched);
+      } catch (error) {
+        console.error("Error fetching articles:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (isLoading) {
+    if (slug) fetchArticles();
+  }, [slug]);
+
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 flex justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center text-red-500">
-        <AlertCircle className="mx-auto mb-4" size={48} />
-        <p className="font-bold">Erreur lors de la récupération des articles.</p>
-        <Link to="/" className="text-blue-600 hover:underline block mt-4">Retour à l'accueil</Link>
       </div>
     );
   }
@@ -59,9 +87,9 @@ export default function CategoryPage() {
       </div>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {articlesArray.length > 0 ? (
+        {articles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-            {articlesArray.map(article => (
+            {articles.map(article => (
               <ArticleCard key={article.id} article={article} />
             ))}
           </div>
