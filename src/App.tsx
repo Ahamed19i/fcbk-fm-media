@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -42,62 +43,65 @@ export default function App() {
   useEffect(() => {
     seedData();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
       if (firebaseUser) {
+        setUser(firebaseUser);
         setProfileLoading(true);
-        const docRef = doc(db, 'users', firebaseUser.uid);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          setProfile({ ...docSnap.data(), uid: firebaseUser.uid } as UserProfile);
-        } else {
-          // Check if user is in whitelist
-          const email = firebaseUser.email?.toLowerCase() || '';
-          const whitelistRef = doc(db, 'whitelist', email);
-          const whitelistSnap = await getDoc(whitelistRef);
+        try {
+          const docRef = doc(db, 'users', firebaseUser.uid);
+          const docSnap = await getDoc(docRef);
           
-          const isAdminEmail = email === "ahassanimhoma20@gmail.com";
-          
-          if (whitelistSnap.exists() || isAdminEmail) {
-            const whitelistData = whitelistSnap.exists() ? whitelistSnap.data() : null;
+          if (docSnap.exists()) {
+            setProfile({ ...docSnap.data(), uid: firebaseUser.uid } as UserProfile);
+          } else {
+            // Check if user is in whitelist
+            const email = firebaseUser.email?.toLowerCase() || '';
+            const whitelistRef = doc(db, 'whitelist', email);
+            const whitelistSnap = await getDoc(whitelistRef);
             
-            // Create a default profile for new authorized users
-            const newProfile: UserProfile = {
-              uid: firebaseUser.uid,
-              email: email,
-              displayName: firebaseUser.displayName || 'Nouvel Utilisateur',
-              photoURL: firebaseUser.photoURL || '',
-              role: isAdminEmail ? 'admin' : (whitelistData?.role || 'journalist'),
-              createdAt: new Date().toISOString(),
-              bio: ''
-            };
+            const isAdminEmail = email === "ahassanimhoma20@gmail.com";
             
-            try {
+            if (whitelistSnap.exists() || isAdminEmail) {
+              const whitelistData = whitelistSnap.exists() ? whitelistSnap.data() : null;
+              
+              const newProfile: UserProfile = {
+                uid: firebaseUser.uid,
+                email: email,
+                displayName: firebaseUser.displayName || 'Nouvel Utilisateur',
+                photoURL: firebaseUser.photoURL || '',
+                role: isAdminEmail ? 'admin' : (whitelistData?.role || 'journalist'),
+                createdAt: new Date().toISOString(),
+                bio: ''
+              };
+              
               await setDoc(docRef, newProfile);
               setProfile(newProfile);
               
-              // Remove from whitelist after successful profile creation
               if (whitelistSnap.exists()) {
                 await deleteDoc(whitelistRef);
               }
               toast.success("Profil créé avec succès ! Bienvenue.");
-            } catch (error) {
-              console.error("Error creating user profile:", error);
-              toast.error("Erreur lors de la création du profil. Veuillez contacter un administrateur.");
+            } else {
+              console.error("User not authorized:", email);
+              toast.error("Accès refusé. Votre email n'est pas autorisé.");
+              setProfile(null);
+              await auth.signOut();
             }
-          } else {
-            // User not authorized
-            console.error("User not in whitelist");
-            toast.error("Accès refusé. Votre email n'est pas autorisé.");
-            await auth.signOut();
-            setProfile(null);
           }
+        } catch (error: any) {
+          console.error("Error in auth flow:", error);
+          if (error.code !== 'permission-denied') {
+            toast.error("Erreur de connexion : " + error.message);
+          }
+        } finally {
+          setProfileLoading(false);
+          setLoading(false);
         }
-        setProfileLoading(false);
       } else {
+        setUser(null);
         setProfile(null);
+        setProfileLoading(false);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
