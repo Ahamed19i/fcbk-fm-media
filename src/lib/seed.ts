@@ -126,15 +126,19 @@ const SAMPLE_ARTICLES = [
 ];
 
 export const seedData = async () => {
-  const articlesRef = collection(db, 'articles');
-  const q = query(articlesRef, limit(1));
-  const querySnapshot = await getDocs(q);
+  try {
+    const articlesRef = collection(db, 'articles');
+    const q = query(articlesRef, limit(1));
+    const querySnapshot = await getDocs(q);
 
-  if (querySnapshot.empty) {
-    console.log("Seeding sample data...");
-    for (const article of SAMPLE_ARTICLES) {
-      await addDoc(articlesRef, article);
+    if (querySnapshot.empty) {
+      console.log("Seeding sample data...");
+      for (const article of SAMPLE_ARTICLES) {
+        await addDoc(articlesRef, article);
+      }
+      console.log("Seeding complete.");
     }
-    console.log("Seeding complete.");
+  } catch (error) {
+    console.warn("Client-side seed error (authorized members only):", error);
   }
 };

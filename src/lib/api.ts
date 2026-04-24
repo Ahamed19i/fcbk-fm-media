@@ -1,13 +1,13 @@
 
-
 import axios from 'axios';
 import useSWR from 'swr';
 
 const api = axios.create({
   baseURL: '/api',
+  timeout: 10000, // 10 seconds timeout
 });
 
-const fetcher = (url: string) => api.get(url).then((res) => {
+export const fetcher = (url: string) => api.get(url).then((res) => {
   if (res.data && res.data.error && !Array.isArray(res.data)) {
     throw new Error(JSON.stringify(res.data));
   }

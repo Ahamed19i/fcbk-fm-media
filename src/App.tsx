@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -38,7 +39,11 @@ export default function App() {
   const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
-    seedData();
+    try {
+      seedData();
+    } catch (e) {
+      console.warn("Client-side seeding skipped or failed", e);
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {

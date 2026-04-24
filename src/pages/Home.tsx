@@ -1,6 +1,7 @@
 
-import React, { useMemo } from 'react';
-import { useArticles } from '../lib/api';
+import React, { useMemo, useState } from 'react';
+import useSWR from 'swr';
+import { useArticles, fetcher } from '../lib/api';
 import { Article } from '../types';
 import ArticleCard from '../components/ArticleCard';
 import { ChevronRight, TrendingUp, Zap, AlertCircle } from 'lucide-react';
@@ -19,6 +20,9 @@ export default function Home() {
       trending: articles.slice(1, 6)
     };
   }, [articles]);
+
+  const { data: health } = useSWR('/health', fetcher);
+  const [showDebug, setShowDebug] = useState(false);
 
   if (isLoading) {
     return (
@@ -41,6 +45,19 @@ export default function Home() {
   return (
     <div className="bg-white dark:bg-gray-950 transition-colors duration-300">
       <SEO />
+      
+      {/* Diagnostic Debug Panel - Hidden by default, toggle with secret click or env */}
+      <div className="bg-gray-100 border-b p-2 text-[10px] font-mono flex justify-between items-center">
+        <span>API Status: {health ? "Connected" : "Loading..."}</span>
+        <button onClick={() => setShowDebug(!showDebug)} className="underline">Debug</button>
+      </div>
+      
+      {showDebug && (
+        <div className="bg-black text-green-400 p-4 font-mono text-xs overflow-auto max-h-40">
+          <pre>{JSON.stringify({ health, articlesCount: articles.length, error }, null, 2)}</pre>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {breakingNews && <ArticleCard article={breakingNews} variant="large" />}

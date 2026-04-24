@@ -1,5 +1,4 @@
 
-
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -42,7 +41,14 @@ if (!admin.apps.length) {
 
 // Set specific database ID if provided in config
 const FIRESTORE_DATABASE_ID = "ai-studio-9660e84f-5cca-4695-9c34-462ec8e31f0e";
-const firestordb = getFirestore(firebaseApp, FIRESTORE_DATABASE_ID);
+let firestordb: admin.firestore.Firestore;
+
+try {
+  firestordb = getFirestore(firebaseApp, FIRESTORE_DATABASE_ID);
+} catch (err) {
+  console.warn(`Failed to connect to ${FIRESTORE_DATABASE_ID}, falling back to default DB`, err);
+  firestordb = getFirestore(firebaseApp);
+}
 
 // SERVER-SIDE SEEDING
 async function seedIfEmpty() {
@@ -88,7 +94,25 @@ async function seedIfEmpty() {
       for (const article of articles) {
         await firestordb.collection("articles").add(article);
       }
-      console.log("Server-side seeding complete.");
+      console.log("Server-side seeding articles complete.");
+    }
+
+    const catSnap = await firestordb.collection("categories").limit(1).get();
+    if (catSnap.empty) {
+      console.log("Seeding categories...");
+      const categories = [
+        { name: "National", slug: "national", order: 1 },
+        { name: "International", slug: "international", order: 2 },
+        { name: "Politique", slug: "politique", order: 3 },
+        { name: "Économie", slug: "economie", order: 4 },
+        { name: "Sport", slug: "sport", order: 5 },
+        { name: "Culture", slug: "culture", order: 6 },
+        { name: "Diaspora", slug: "diaspora", order: 7 },
+        { name: "Société", slug: "societe", order: 8 }
+      ];
+      for (const cat of categories) {
+        await firestordb.collection("categories").doc(cat.slug).set(cat);
+      }
     }
   } catch (err) {
     console.error("Seeding error:", err);
@@ -110,8 +134,28 @@ async function startServer() {
   };
 
   // API routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  app.get("/api/health", async (req, res) => {
+    let dbStatus = "unknown";
+    let articleCount = 0;
+    try {
+      const snap = await firestordb.collection("articles").limit(1).get();
+      dbStatus = "connected";
+      const countSnap = await firestordb.collection("articles").count().get();
+      articleCount = countSnap.data().count;
+    } catch (e: any) {
+      dbStatus = `error: ${e.message}`;
+    }
+
+    res.json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      database: {
+        id: FIRESTORE_DATABASE_ID,
+        status: dbStatus,
+        articleCount
+      },
+      env: process.env.NODE_ENV
+    });
   });
 
   // Articles API with caching and optimization
@@ -121,7 +165,18 @@ async function startServer() {
       
       // OPTIMIZATION: Fetch all articles and filter in memory to avoid missing index errors
       // In production with thousands of articles, you would need composite indexes
-      const snapshot = await firestordb.collection("articles").get();
+      const snapshot = await firestordb.collection("articles")
+        .limit(200) // Safety limit for in-memory filtering
+        .get();
+      
+      if (snapshot.empty) {
+        // Try to trigger seeding if empty
+        console.log("Articles collection is empty, triggering seed...");
+        await seedIfEmpty();
+        // Return empty array for this request, next one should have data
+        return res.json([]);
+      }
+
       let articles = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data() as any
