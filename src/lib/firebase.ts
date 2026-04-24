@@ -1,4 +1,5 @@
 
+
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -12,6 +13,17 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
+
+// Check if critical config is missing
+const isFirebaseConfigured = !!(
+  firebaseConfig.apiKey && 
+  firebaseConfig.authDomain && 
+  firebaseConfig.projectId
+);
+
+if (!isFirebaseConfigured) {
+  console.warn("Firebase configuration is incomplete. Check your environment variables (VITE_FIREBASE_...).");
+}
 
 const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || '(default)';
 
