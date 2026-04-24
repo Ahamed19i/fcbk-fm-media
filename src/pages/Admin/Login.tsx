@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../../lib/firebase';
 import { toast } from 'sonner';
@@ -26,23 +26,30 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
   }, [profile, profileLoading, navigate, location]);
 
   const handleGoogleLogin = async () => {
+    if (loading) return;
     setLoading(true);
+    
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
     try {
-      const provider = new GoogleAuthProvider();
-      // Add custom parameters if needed
-      provider.setCustomParameters({ prompt: 'select_account' });
-      
+      // Try popup first
       await signInWithPopup(auth, provider);
       toast.success("Connexion réussie !");
     } catch (error: any) {
-      console.error("Login error full details:", error);
+      console.error("Login error:", error);
       
       if (error.code === 'auth/popup-blocked') {
-        toast.error("Le popup a été bloqué par votre navigateur. Veuillez l'autoriser.");
+        toast.info("Le popup est bloqué. Tentative de connexion par redirection...");
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch (redirError: any) {
+          toast.error("Échec de la redirection: " + redirError.message);
+        }
       } else if (error.code === 'auth/unauthorized-domain') {
-        toast.error("Domaine non autorisé. Ajoutez cette URL dans la console Firebase.");
+        toast.error("Domaine non autorisé. Ajoutez fcbk-fm-media.vercel.app dans la console Firebase (Authentification > Paramètres > Domaines autorisés).");
       } else {
-        toast.error(`Erreur de connexion: ${error.message || "Erreur inconnue"}`);
+        toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
       }
     } finally {
       setLoading(false);
