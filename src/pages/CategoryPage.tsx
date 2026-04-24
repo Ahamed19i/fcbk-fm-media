@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useArticles } from '../lib/api';
@@ -12,6 +13,8 @@ export default function CategoryPage() {
     category: slug === 'all' ? undefined : slug,
     limit: 50 
   });
+
+  const articlesArray = Array.isArray(articles) ? articles : [];
 
   if (isLoading) {
     return (
@@ -56,9 +59,9 @@ export default function CategoryPage() {
       </div>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {articles.length > 0 ? (
+        {articlesArray.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-            {articles.map(article => (
+            {articlesArray.map(article => (
               <ArticleCard key={article.id} article={article} />
             ))}
           </div>

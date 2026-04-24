@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { useArticles } from '../lib/api';
 import { Article } from '../types';
@@ -8,10 +9,11 @@ import SEO from '../components/SEO';
 import NewsletterBox from '../components/NewsletterBox';
 
 export default function Home() {
-  const { data: articles = [], error, isLoading } = useArticles({ limit: 50 });
+  const { data, error, isLoading } = useArticles({ limit: 50 });
+  const articles = Array.isArray(data) ? data : [];
 
   const { breakingNews, trending } = useMemo(() => {
-    if (!articles || articles.length === 0) return { breakingNews: null, trending: [] };
+    if (articles.length === 0) return { breakingNews: null, trending: [] };
     return {
       breakingNews: articles.find((a: Article) => a.isBreaking) || articles[0],
       trending: articles.slice(1, 6)

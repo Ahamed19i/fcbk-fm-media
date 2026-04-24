@@ -1,3 +1,5 @@
+
+
 import axios from 'axios';
 import useSWR from 'swr';
 
@@ -5,7 +7,12 @@ const api = axios.create({
   baseURL: '/api',
 });
 
-const fetcher = (url: string) => api.get(url).then((res) => res.data);
+const fetcher = (url: string) => api.get(url).then((res) => {
+  if (res.data && res.data.error && !Array.isArray(res.data)) {
+    throw new Error(JSON.stringify(res.data));
+  }
+  return res.data;
+});
 
 export const useArticles = (params: { limit?: number; category?: string } = {}) => {
   const query = new URLSearchParams(params as any).toString();
