@@ -24,7 +24,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-             ( (request.auth.token.email == "ahassanimhoma20@gmail.com" && request.auth.token.email_verified == true) || 
+             ( request.auth.token.email == "ahassanimhoma20@gmail.com" || 
                getRole() == 'admin' );
     }
     
@@ -33,7 +33,7 @@ service cloud.firestore {
     }
     
     function isJournalist() {
-      return isAuthenticated() && (isEditor() || getRole() == 'journalist');
+      return isAuthenticated() && (isEditor() || getRole() == 'journalist' || request.auth.token.email == "ahassanimhoma20@gmail.com");
     }
 
     function isOwner(userId) {

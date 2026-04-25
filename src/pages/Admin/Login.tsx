@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import { signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -41,7 +39,7 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
         if (result) {
           console.log("AdminLogin: Successfully recovered user from redirect:", result.user.email);
           toast.success("Connexion réussie !");
-          // Navigation is handled by the profile useEffect
+          setIsRedirecting(false);
         } else if (isReturnFromAuth) {
           console.log("AdminLogin: No redirect result, but check if user exists anyway...");
           if (auth.currentUser) {

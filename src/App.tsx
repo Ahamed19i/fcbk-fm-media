@@ -53,47 +53,63 @@ export default function App() {
 
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
-          console.log("App: Fetching profile for", email);
+          console.log("App: Fetching profile for authenticated user:", email);
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
+            console.log("App: Profile found in Firestore");
             setProfile({ ...docSnap.data(), uid: firebaseUser.uid } as UserProfile);
           } else {
-            console.log("App: No profile found. Checking authorization...");
-            const whitelistRef = doc(db, 'whitelist', email);
-            let whitelistSnap;
-            try {
-              whitelistSnap = await getDoc(whitelistRef);
-            } catch (e) {
-              console.warn("App: Whitelist check failed, likely rules or missing collection. Admin bypass check follows.");
-            }
+            console.log("App: No profile found. Checking authorization for:", email);
             
-            if (isAdminEmail || (whitelistSnap && whitelistSnap.exists())) {
-              const whitelistData = whitelistSnap && whitelistSnap.exists() ? whitelistSnap.data() : null;
-              
+            if (isAdminEmail) {
+              console.log("App: Admin email detected. Bypassing whitelist check and creating profile.");
               const newProfile: UserProfile = {
                 uid: firebaseUser.uid,
                 email: email,
                 displayName: firebaseUser.displayName || 'Administrateur',
                 photoURL: firebaseUser.photoURL || '',
-                role: isAdminEmail ? 'admin' : (whitelistData?.role || 'journalist'),
+                role: 'admin',
                 createdAt: new Date().toISOString(),
-                bio: ''
+                bio: 'Compte administrateur principal'
               };
               
-              console.log("App: Auto-authorizing and creating profile for admin/whitelist user");
               await setDoc(docRef, newProfile);
               setProfile(newProfile);
+              toast.success("Espace Admin activé !");
+            } else {
+              // Only check whitelist for non-admin emails
+              console.log("App: Checking whitelist for non-admin user...");
+              const whitelistRef = doc(db, 'whitelist', email);
+              let whitelistSnap;
+              try {
+                whitelistSnap = await getDoc(whitelistRef);
+              } catch (e) {
+                console.warn("App: Whitelist Fetch error (likely permissions):", e);
+              }
               
               if (whitelistSnap && whitelistSnap.exists()) {
+                const whitelistData = whitelistSnap.data();
+                const newProfile: UserProfile = {
+                  uid: firebaseUser.uid,
+                  email: email,
+                  displayName: firebaseUser.displayName || 'Journaliste',
+                  photoURL: firebaseUser.photoURL || '',
+                  role: whitelistData.role || 'journalist',
+                  createdAt: new Date().toISOString(),
+                  bio: ''
+                };
+                
+                await setDoc(docRef, newProfile);
+                setProfile(newProfile);
                 try { await deleteDoc(whitelistRef); } catch (e) { /* ignore */ }
+                toast.success("Profil créé avec succès !");
+              } else {
+                console.error("App: Access denied for email:", email);
+                toast.error(`Accès refusé. ${email} n'est pas autorisé.`);
+                await auth.signOut();
+                setProfile(null);
               }
-              toast.success("Activation du compte réussie !");
-            } else {
-              console.error("App: Unauthorized access attempt:", email);
-              toast.error(`Accès refusé. ${email} n'est pas dans la liste autorisée.`);
-              await auth.signOut();
-              setProfile(null);
             }
           }
         } catch (error: any) {
