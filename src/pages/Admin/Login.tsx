@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -20,50 +21,44 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
   // Handle redirect result on mount
   useEffect(() => {
     const handleRedirect = async () => {
-      // Small delay to ensure SDK is stable and has attempted to recover session
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      // Check if we are potentially returning from a redirect
       const isReturnFromAuth = window.location.search.includes('apiKey=') || 
                                window.location.hash.includes('access_token=') ||
                                localStorage.getItem('fb-auth-pending') === 'true';
 
-      if (isReturnFromAuth) {
-        setIsRedirecting(true);
-        console.log("AdminLogin: Detected return from OAuth redirect, waiting for result...");
-      }
+      if (!isReturnFromAuth) return;
+
+      setIsRedirecting(true);
+      console.log("AdminLogin: Handling return from auth...");
 
       try {
         const result = await getRedirectResult(auth);
         localStorage.removeItem('fb-auth-pending');
         
         if (result) {
-          console.log("AdminLogin: Successfully recovered user from redirect:", result.user.email);
-          toast.success("Connexion réussie !");
-          setIsRedirecting(false);
-        } else if (isReturnFromAuth) {
-          console.log("AdminLogin: No redirect result, but check if user exists anyway...");
+          console.log("AdminLogin: Redirect success for", result.user.email);
+          toast.success("Authentification réussie !");
+          // Stay in isRedirecting(true) until profile useEffect redirects us
+        } else {
+          // If result is null, user might already be authed via persistence
+          console.log("AdminLogin: Redirect result was null, checking auth current state...");
           if (auth.currentUser) {
-            console.log("AdminLogin: User already authenticated:", auth.currentUser.email);
-            setIsRedirecting(false);
+            console.log("AdminLogin: User already present via persistence");
           } else {
-            // Give it one last chance
-            setTimeout(() => {
-              if (!auth.currentUser) {
-                setIsRedirecting(false);
-                console.log("AdminLogin: Giving up on redirect result.");
-              }
-            }, 2000);
+            // Wait a bit more for auth state to stabilize
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            if (!auth.currentUser) {
+              console.warn("AdminLogin: No user found after waiting.");
+              setIsRedirecting(false);
+            }
           }
         }
       } catch (error: any) {
-        console.error("AdminLogin: Redirect completion error:", error);
+        console.error("AdminLogin: Redirect error", error);
         localStorage.removeItem('fb-auth-pending');
         setIsRedirecting(false);
-        
-        if (error.code === 'auth/unauthorized-domain') {
-          toast.error("ERREUR DOMAINE : L'URL " + window.location.hostname + " doit être ajoutée aux 'Domaines autorisés' dans Firebase.");
-        } else if (error.code !== 'auth/popup-closed-by-user') {
-          toast.error(`Erreur d'authentification : ${error.code}`);
+        if (error.code !== 'auth/popup-closed-by-user') {
+          toast.error(`Erreur: ${error.code}`);
         }
       }
     };
@@ -72,11 +67,11 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
 
   // Redirect if already logged in and profile is ready
   useEffect(() => {
-    if (profile && !profileLoading && !isRedirecting) {
-      const from = (location.state as any)?.from?.pathname || "/admin";
-      navigate(from, { replace: true });
+    if (profile && !profileLoading) {
+      console.log("AdminLogin: Profile ready, navigating to dashboard...");
+      navigate('/admin/dashboard', { replace: true });
     }
-  }, [profile, profileLoading, navigate, location, isRedirecting]);
+  }, [profile, profileLoading, navigate]);
 
   const handleGoogleLogin = async () => {
     if (loading || isRedirecting) return;
@@ -86,32 +81,20 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
     provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      // Always try popup first, it's easier
-      await signInWithPopup(auth, provider);
-      toast.success("Connexion réussie !");
+      console.log("AdminLogin: Trying signInWithPopup...");
+      const result = await signInWithPopup(auth, provider);
+      if (result.user) {
+        toast.success("Connecté !");
+      }
     } catch (error: any) {
-      console.error("Login error:", error);
-      
+      console.warn("AdminLogin: Popup error", error.code);
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-        toast.info("Tentative de connexion par redirection...");
+        toast.info("Redirection vers Google...");
         setIsRedirecting(true);
         localStorage.setItem('fb-auth-pending', 'true');
-        try {
-          await signInWithRedirect(auth, provider);
-        } catch (redirError: any) {
-          setIsRedirecting(false);
-          localStorage.removeItem('fb-auth-pending');
-          toast.error("Échec de la redirection: " + redirError.message);
-        }
-      } else if (error.code === 'auth/unauthorized-domain') {
-        toast.error("ERREUR DE DOMAINE : fcbk-fm-media.vercel.app n'est pas autorisé dans Firebase.");
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        setLoading(false);
+        await signInWithRedirect(auth, provider);
       } else {
         toast.error(`Erreur: ${error.message}`);
-      }
-    } finally {
-      if (!isRedirecting) {
         setLoading(false);
       }
     }
@@ -168,10 +151,20 @@ export default function AdminLogin({ profile, loading: profileLoading }: LoginPr
             <p>Projet IDs: <span className="font-mono">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "non défini"}</span></p>
             <p>Base de données: <span className="font-mono">{import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)"}</span></p>
             <p>Config OK: {!import.meta.env.VITE_FIREBASE_API_KEY ? "❌" : "✅"}</p>
-            <p>Status Auth: {auth.currentUser ? "Connecté" : "Déconnecté"}</p>
-            {isRedirecting && <p className="text-blue-500 animate-pulse font-bold">🔄 Finalisation de la session...</p>}
+            <p>Status Auth: {auth.currentUser ? "✅ Connecté" : "❌ Déconnecté"}</p>
+            <p>Email Firebase: <span className="font-mono text-blue-600 dark:text-blue-400">{auth.currentUser?.email || "Aucun"}</span></p>
+            <p>UID: <span className="font-mono text-[8px]">{auth.currentUser?.uid || "N/A"}</span></p>
+            <p>Profil Chargé: {profile ? "✅ OUI" : "❌ NON"}</p>
+            <p>Rôle: <span className="font-bold">{profile?.role || "Aucun"}</span></p>
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-800 mt-2">
+              <p className="text-[8px] uppercase font-bold text-gray-400">Conseils :</p>
+              <ul className="list-disc pl-3 mt-1 space-y-1">
+                <li>Vérifiez que votre email est exactement celui autorisé.</li>
+                <li>Assurez-vous que la base de données Firestore correspond à votre config Vercel.</li>
+              </ul>
+            </div>
             <p className="pt-3 text-gray-400">
-              Si les IDs ne correspondent pas à votre console Firebase, modifiez vos variables VITE_FIREBASE_* sur Vercel et redeployez.
+              Note importante : Si vous tournez en boucle, assurez-vous d'avoir ajouté <span className="font-bold underline">{window.location.hostname}</span> dans la section "Domaines autorisés" de l'Authentication Firebase.
             </p>
             <div className="flex gap-2 pt-2">
               <button 

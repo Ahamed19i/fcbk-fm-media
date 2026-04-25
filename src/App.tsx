@@ -47,13 +47,14 @@ export default function App() {
       
       if (firebaseUser) {
         setUser(firebaseUser);
-        const email = firebaseUser.email?.toLowerCase() || '';
-        const isAdminEmail = email.trim().toLowerCase() === "ahassanimhoma20@gmail.com";
+        const email = firebaseUser.email?.toLowerCase().trim() || '';
+        const isAdminEmail = email === "ahassanimhoma20@gmail.com";
+        console.log("App Auth: Email detected:", email, "Is Admin:", isAdminEmail);
         setProfileLoading(true);
 
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
-          console.log("App: Fetching profile for authenticated user:", email);
+          console.log("App Firestore: Database instance:", db.app.options.projectId);
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
